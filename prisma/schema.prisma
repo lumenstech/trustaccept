@@ -235,7 +235,7 @@ model Agent {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  decisions       Decision[]
+  decisions       AgentDecision[]
 
   @@unique([tenantId, name])
   @@index([tenantId, status])
@@ -243,10 +243,12 @@ model Agent {
   @@index([tenantId, riskTier])
 }
 
-/// Agent-driven (or agent-attributable) decision events. Append-only by
-/// application convention. Separate from RiskRecord.decision which captures
-/// the human approval decision on a risk-acceptance record; the two coexist.
-model Decision {
+/// Agent-driven (or agent-attributable) decision events. Maps to the
+/// "decisions" SQL table (see migration 20260513000001_decisions_baseline).
+/// Named AgentDecision in the Prisma client to avoid colliding with the
+/// existing `Decision` enum, which captures the human approval decision
+/// on a RiskRecord. The two flows coexist.
+model AgentDecision {
   id             String   @id @default(uuid()) @db.Uuid
   tenantId       String
   action         String
@@ -262,6 +264,7 @@ model Decision {
   signedReceipt  String?
   createdAt      DateTime @default(now())
 
+  @@map("decisions")
   @@index([agentId])
   @@index([createdAt(sort: Desc)])
   @@index([tenantId, createdAt])

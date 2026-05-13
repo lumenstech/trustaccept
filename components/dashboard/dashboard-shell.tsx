@@ -1,5 +1,7 @@
 import Link from "next/link";
 import {
+  Activity,
+  BotMessageSquare,
   Boxes,
   Bug,
   FileSignature,
@@ -7,6 +9,7 @@ import {
   KeyRound,
   LayoutDashboard,
   PlugZap,
+  ScrollText,
   Settings,
   ShieldQuestion,
 } from "lucide-react";
@@ -16,6 +19,9 @@ import { Badge } from "@/components/ui/badge";
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/inbox", label: "Approval Inbox", icon: Inbox },
+  { href: "/dashboard/agents", label: "Agents", icon: BotMessageSquare },
+  { href: "/dashboard/decisions", label: "Decisions", icon: Activity },
+  { href: "/dashboard/evidence", label: "Evidence Export", icon: ScrollText },
   { href: "/dashboard/access-accept", label: "Access Accept", icon: KeyRound },
   { href: "/dashboard/vulnerability-acceptance", label: "Vulnerability Accept", icon: Bug },
   { href: "/dashboard/risk-records", label: "Risk Records", icon: ShieldQuestion },

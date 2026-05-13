@@ -1,0 +1,13 @@
+{
+  "extends": "next/core-web-vitals",
+  "ignorePatterns": [
+    ".next/",
+    "node_modules/",
+    "prisma/migrations/",
+    "next-env.d.ts"
+  ],
+  "rules": {
+    "@next/next/no-assign-module-variable": "warn",
+    "react/no-unescaped-entities": "warn"
+  }
+}

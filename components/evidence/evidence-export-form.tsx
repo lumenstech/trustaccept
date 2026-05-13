@@ -105,12 +105,17 @@ export function EvidenceExportForm({ agents }: Props) {
             <FieldGroup
               label="Agent (optional)"
               htmlFor="agent_id"
-              hint="Leave blank to export decisions across all agents in the window."
+              hint={
+                agents.length === 0
+                  ? "No agents registered yet. Exports will include every decision in the window."
+                  : "Leave blank to export decisions across all agents in the window."
+              }
             >
               <Select
                 id="agent_id"
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
+                disabled={agents.length === 0}
               >
                 <option value="">All agents</option>
                 {agents.map((a) => (

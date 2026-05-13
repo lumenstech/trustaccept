@@ -1,29 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, FileSignature, Pencil } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { AgentLifecycleActions } from "@/components/agents/agent-lifecycle-actions";
 import {
-  agentRiskTierTone,
-  agentStatusTone,
-  formatSpendCapsSummary,
-} from "@/lib/agents-ui";
-import {
-  capCheckTone,
-  decisionOutcomeLabel,
-  decisionOutcomeTone,
-  formatCapCheckSummary,
-  formatEvidenceHash,
-  receiptIndicator,
-} from "@/lib/decisions-ui";
+  AgentEnvironmentBadge,
+  AgentRiskTierBadge,
+  AgentStatusBadge,
+  AllowedActionsList,
+} from "@/components/agents/agent-badges";
+import { DecisionsTable } from "@/components/decisions/decisions-table";
+import { formatSpendCapsSummary } from "@/lib/agents-ui";
 import { requireDashboardAccess } from "@/src/server/auth";
-import {
-  AgentNotFoundError,
-  getAgent,
-} from "@/src/server/agents";
+import { AgentNotFoundError, getAgent } from "@/src/server/agents";
 import { getStore } from "@/src/server/store";
 
 export const dynamic = "force-dynamic";
@@ -102,21 +94,15 @@ export default function AgentDetailPage({ params }: Props) {
               <KeyValue label="Department" value={agent.department ?? "—"} />
               <KeyValue
                 label="Environment"
-                value={<span className="uppercase">{agent.environment}</span>}
+                value={<AgentEnvironmentBadge environment={agent.environment} />}
               />
               <KeyValue
                 label="Risk tier"
-                value={
-                  <Badge tone={agentRiskTierTone(agent.riskTier)}>
-                    {agent.riskTier.toUpperCase()}
-                  </Badge>
-                }
+                value={<AgentRiskTierBadge tier={agent.riskTier} />}
               />
               <KeyValue
                 label="Status"
-                value={
-                  <Badge tone={agentStatusTone(agent.status)}>{agent.status}</Badge>
-                }
+                value={<AgentStatusBadge status={agent.status} />}
               />
               <KeyValue label="Created" value={agent.createdAt} />
               <KeyValue label="Updated" value={agent.updatedAt} />
@@ -163,21 +149,7 @@ export default function AgentDetailPage({ params }: Props) {
             <CardTitle>Allowed actions</CardTitle>
           </CardHeader>
           <CardContent>
-            {agent.allowedActions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No actions have been allowed. Decisions referencing this agent
-                will still be recorded, but the agent cannot be granted scoped
-                permissions without listed actions.
-              </p>
-            ) : (
-              <ul className="flex flex-wrap gap-2">
-                {agent.allowedActions.map((action) => (
-                  <li key={action}>
-                    <Badge tone="info">{action}</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <AllowedActionsList actions={agent.allowedActions} />
           </CardContent>
         </Card>
 
@@ -195,65 +167,14 @@ export default function AgentDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent className="p-0">
             {recentDecisions.length === 0 ? (
-              <p className="px-6 pb-6 pt-2 text-sm text-muted-foreground">
-                No decisions have been recorded against this agent yet.
-              </p>
+              <EmptyState
+                size="sm"
+                icon={Activity}
+                title="No decisions yet"
+                description="Decisions referencing this agent will appear here as soon as they are recorded."
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border text-left text-xs uppercase tracking-widest text-muted-foreground">
-                    <tr>
-                      <th className="px-6 py-3">When</th>
-                      <th className="px-6 py-3">Action</th>
-                      <th className="px-6 py-3">Outcome</th>
-                      <th className="px-6 py-3">Cap check</th>
-                      <th className="px-6 py-3">Evidence</th>
-                      <th className="px-6 py-3">Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentDecisions.map((d) => {
-                      const indicator = receiptIndicator(d);
-                      return (
-                        <tr
-                          key={d.id}
-                          className="border-b border-border last:border-0"
-                        >
-                          <td className="px-6 py-3 text-muted-foreground">
-                            {d.createdAt}
-                          </td>
-                          <td className="px-6 py-3">{d.action}</td>
-                          <td className="px-6 py-3">
-                            <Badge tone={decisionOutcomeTone(d.decision)}>
-                              {decisionOutcomeLabel(d.decision)}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-3">
-                            <Badge tone={capCheckTone(d.context.cap_check)}>
-                              {formatCapCheckSummary(d.context.cap_check)}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-3 font-mono text-xs text-muted-foreground">
-                            {formatEvidenceHash(d.evidenceHash)}
-                          </td>
-                          <td className="px-6 py-3">
-                            {indicator.signed ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-success">
-                                <FileSignature className="h-3.5 w-3.5" />
-                                {indicator.short}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                {indicator.label}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DecisionsTable decisions={recentDecisions} />
             )}
           </CardContent>
         </Card>

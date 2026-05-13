@@ -1,3 +1,4 @@
+import { EVIDENCE_EXPORT_MAX_WINDOW_MS } from "@/lib/evidence-window";
 import type { DecisionRecord, SessionUser } from "@/lib/types";
 import {
   listDecisionsForExport,
@@ -5,8 +6,6 @@ import {
 } from "./decisions";
 import { getSigningKeyId } from "./signing";
 import { buildZip, sha256Hex } from "./zip";
-
-const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
 export class EvidenceExportError extends Error {
   status = 400 as const;
@@ -32,7 +31,7 @@ export function validateWindow(from: string, to: string): { fromMs: number; toMs
   if (fromMs > toMs) {
     throw new EvidenceExportError("from must be <= to");
   }
-  if (toMs - fromMs > NINETY_DAYS_MS) {
+  if (toMs - fromMs > EVIDENCE_EXPORT_MAX_WINDOW_MS) {
     throw new EvidenceExportError("window exceeds 90-day maximum");
   }
   return { fromMs, toMs };

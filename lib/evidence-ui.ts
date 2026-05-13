@@ -1,3 +1,8 @@
+import {
+  EVIDENCE_EXPORT_MAX_WINDOW_LABEL,
+  EVIDENCE_EXPORT_MAX_WINDOW_MS,
+} from "./evidence-window";
+
 export interface EvidenceExportFormInput {
   from: string;
   to: string;
@@ -11,9 +16,29 @@ export interface EvidenceExportValidation {
   href?: string;
 }
 
-const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ALLOWED_FORMATS = new Set(["json", "csv", "zip"]);
+
+/**
+ * Build the export URL for a validated form input. Used both by the
+ * client form (on submit) and exported for any caller that needs the
+ * canonical link shape — keeping URL construction in one place.
+ */
+export function buildExportHref(input: {
+  from: string;
+  to: string;
+  format: string;
+  agent_id?: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("from", `${input.from}T00:00:00Z`);
+  params.set("to", `${input.to}T23:59:59Z`);
+  params.set("format", input.format);
+  if (input.agent_id && input.agent_id.trim().length > 0) {
+    params.set("agent_id", input.agent_id.trim());
+  }
+  return `/api/v1/decisions/export?${params.toString()}`;
+}
 
 /**
  * Mirrors the server's DecisionsExportQuery rules (90-day max window,
@@ -47,8 +72,8 @@ export function validateExportForm(
       errors.from = "Invalid date";
     } else if (fromMs > toMs) {
       errors.to = "End must be on or after start";
-    } else if (toMs - fromMs > NINETY_DAYS_MS) {
-      errors.to = "Export window cannot exceed 90 days";
+    } else if (toMs - fromMs > EVIDENCE_EXPORT_MAX_WINDOW_MS) {
+      errors.to = `Export window cannot exceed ${EVIDENCE_EXPORT_MAX_WINDOW_LABEL}`;
     }
   }
 
@@ -56,16 +81,14 @@ export function validateExportForm(
     return { ok: false, errors };
   }
 
-  const params = new URLSearchParams();
-  params.set("from", `${input.from}T00:00:00Z`);
-  params.set("to", `${input.to}T23:59:59Z`);
-  params.set("format", input.format);
-  if (input.agent_id && input.agent_id.trim().length > 0) {
-    params.set("agent_id", input.agent_id.trim());
-  }
   return {
     ok: true,
     errors: {},
-    href: `/api/v1/decisions/export?${params.toString()}`,
+    href: buildExportHref({
+      from: input.from,
+      to: input.to,
+      format: input.format,
+      agent_id: input.agent_id,
+    }),
   };
 }

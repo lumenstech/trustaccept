@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PauseCircle, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FormError } from "@/components/ui/form-error";
 import { lifecyclePermissions } from "@/lib/agents-ui";
 import type { Agent } from "@/lib/types";
 
@@ -75,11 +76,7 @@ export function AgentLifecycleActions({ agent, variant = "row" }: Props) {
           {pending === "revoke" ? "Revoking…" : perms.revokeLabel}
         </Button>
       </div>
-      {error ? (
-        <p className="text-xs text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <FormError message={error} className="text-xs" />
     </div>
   );
 }

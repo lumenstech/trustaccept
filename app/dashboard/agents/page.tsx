@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { BotMessageSquare, Plus } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { AgentLifecycleActions } from "@/components/agents/agent-lifecycle-actions";
 import {
-  agentRiskTierTone,
-  agentStatusTone,
+  AgentEnvironmentBadge,
+  AgentRiskTierBadge,
+  AgentStatusBadge,
+} from "@/components/agents/agent-badges";
+import {
   formatAllowedActionsCount,
   formatSpendCapsSummary,
 } from "@/lib/agents-ui";
@@ -51,7 +54,21 @@ export default function AgentsPage() {
         <Card>
           <CardContent className="p-0">
             {total === 0 ? (
-              <EmptyState isAdmin={isAdmin} />
+              <EmptyState
+                icon={BotMessageSquare}
+                title="No agents registered yet"
+                description="Register an agent to start recording decisions, evidence hashes, and signed receipts."
+                action={
+                  isAdmin ? (
+                    <Link href="/dashboard/agents/new">
+                      <Button>
+                        <Plus className="h-4 w-4" />
+                        Register your first agent
+                      </Button>
+                    </Link>
+                  ) : null
+                }
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -84,18 +101,14 @@ export default function AgentsPage() {
                             {agent.id}
                           </div>
                         </td>
-                        <td className="px-6 py-4 uppercase text-muted-foreground">
-                          {agent.environment}
+                        <td className="px-6 py-4">
+                          <AgentEnvironmentBadge environment={agent.environment} />
                         </td>
                         <td className="px-6 py-4">
-                          <Badge tone={agentRiskTierTone(agent.riskTier)}>
-                            {agent.riskTier.toUpperCase()}
-                          </Badge>
+                          <AgentRiskTierBadge tier={agent.riskTier} />
                         </td>
                         <td className="px-6 py-4">
-                          <Badge tone={agentStatusTone(agent.status)}>
-                            {agent.status}
-                          </Badge>
+                          <AgentStatusBadge status={agent.status} />
                         </td>
                         <td className="px-6 py-4 text-muted-foreground">
                           {formatAllowedActionsCount(agent.allowedActions)}
@@ -128,28 +141,5 @@ export default function AgentsPage() {
         </Card>
       </div>
     </>
-  );
-}
-
-function EmptyState({ isAdmin }: { isAdmin: boolean }) {
-  return (
-    <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-      <BotMessageSquare className="h-10 w-10 text-muted-foreground" />
-      <div>
-        <p className="text-base font-medium">No agents registered yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Register an agent to start recording decisions, evidence hashes, and
-          signed receipts.
-        </p>
-      </div>
-      {isAdmin ? (
-        <Link href="/dashboard/agents/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Register your first agent
-          </Button>
-        </Link>
-      ) : null}
-    </div>
   );
 }

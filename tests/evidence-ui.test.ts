@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { validateExportForm } from "@/lib/evidence-ui";
+import { buildExportHref, validateExportForm } from "@/lib/evidence-ui";
+import { EVIDENCE_EXPORT_MAX_WINDOW_MS } from "@/lib/evidence-window";
 
 describe("evidence export form validation", () => {
   it("requires from, to, and format", () => {
@@ -72,5 +73,56 @@ describe("evidence export form validation", () => {
     });
     expect(r.ok).toBe(true);
     expect(r.href).toContain("agent_id=11111111-1111-1111-1111-111111111111");
+  });
+});
+
+describe("buildExportHref — single source of truth for the export URL", () => {
+  it("renders the canonical shape: api/v1/decisions/export?from=…&to=…&format=…", () => {
+    const href = buildExportHref({
+      from: "2026-05-01",
+      to: "2026-05-13",
+      format: "zip",
+    });
+    expect(href).toBe(
+      "/api/v1/decisions/export?from=2026-05-01T00%3A00%3A00Z&to=2026-05-13T23%3A59%3A59Z&format=zip",
+    );
+  });
+
+  it("omits agent_id when blank or whitespace", () => {
+    const href = buildExportHref({
+      from: "2026-05-01",
+      to: "2026-05-13",
+      format: "json",
+      agent_id: "   ",
+    });
+    expect(href).not.toContain("agent_id=");
+  });
+
+  it("the validator delegates to buildExportHref so both produce the same URL", () => {
+    const ok = validateExportForm({
+      from: "2026-05-01",
+      to: "2026-05-13",
+      format: "csv",
+    });
+    expect(ok.href).toBe(
+      buildExportHref({ from: "2026-05-01", to: "2026-05-13", format: "csv" }),
+    );
+  });
+});
+
+describe("90-day window — server/client lockstep", () => {
+  it("uses the shared EVIDENCE_EXPORT_MAX_WINDOW_MS constant", () => {
+    expect(EVIDENCE_EXPORT_MAX_WINDOW_MS).toBe(90 * 24 * 60 * 60 * 1000);
+  });
+
+  it("rejects a window exactly 1 ms beyond the cap", async () => {
+    // Server uses the same constant; importing the server validator
+    // here proves both surfaces are wired to the same MS value.
+    const { validateWindow } = await import("@/src/server/evidenceExport");
+    const start = new Date("2026-01-01T00:00:00Z").getTime();
+    const justOver = new Date(start + EVIDENCE_EXPORT_MAX_WINDOW_MS + 1).toISOString();
+    expect(() =>
+      validateWindow("2026-01-01T00:00:00Z", justOver),
+    ).toThrow(/90-day/);
   });
 });

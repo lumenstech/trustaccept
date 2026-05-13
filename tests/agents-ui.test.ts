@@ -60,6 +60,14 @@ describe("agent list rendering helpers", () => {
     expect(agentRiskTierTone("low")).toBe("neutral");
     expect(agentRiskTierTone("critical")).toBe("danger");
   });
+
+  it("maps risk tier and status across the full enum", () => {
+    expect(agentStatusTone("active")).toBe("success");
+    expect(agentStatusTone("paused")).toBe("amber");
+    expect(agentStatusTone("revoked")).toBe("danger");
+    expect(agentRiskTierTone("medium")).toBe("info");
+    expect(agentRiskTierTone("high")).toBe("amber");
+  });
 });
 
 describe("parseAllowedActions", () => {

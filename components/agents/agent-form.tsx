@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, BotMessageSquare } from "lucide-react";
+import { BotMessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup, HelpText, Input, Select, Textarea } from "@/components/ui/form";
+import { FormError } from "@/components/ui/form-error";
 import {
   agentToFormInput,
   buildPatchBody,
@@ -262,15 +263,7 @@ export function AgentForm({ mode }: Props) {
             </div>
           </fieldset>
 
-          {serverError ? (
-            <div
-              className="flex items-center gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
-              role="alert"
-            >
-              <AlertCircle className="h-4 w-4" />
-              {serverError}
-            </div>
-          ) : null}
+          <FormError message={serverError} />
 
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={submitting}>

@@ -135,8 +135,12 @@ describe("canonical hash + signing primitives", () => {
       iat: 1,
     });
     const [h, p, s] = jws.split(".");
-    // Flip a character in the signature to invalidate it.
-    const broken = `${h}.${p}.${s.slice(0, -1)}${s.slice(-1) === "A" ? "B" : "A"}`;
+    // Flip the first signature byte by toggling its leading character.
+    // Avoid the trailing 2 chars whose low bits are padding (changing them
+    // does not affect the decoded signature byte and would not invalidate).
+    const head = s[0];
+    const swapped = head === "A" ? "B" : "A";
+    const broken = `${h}.${p}.${swapped}${s.slice(1)}`;
     expect(verifyDecisionReceipt(broken).valid).toBe(false);
   });
 });

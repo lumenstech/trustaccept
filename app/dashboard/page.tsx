@@ -68,6 +68,9 @@ export default function DashboardOverview() {
             <Link href="/dashboard/vulnerability-acceptance">
               <Button variant="outline">Vulnerability Accept</Button>
             </Link>
+            <Link href="/dashboard/cisa-kev-review">
+              <Button variant="outline">KEV Exposure Review</Button>
+            </Link>
             <Link href="/dashboard/evidence-desk">
               <Button variant="outline">Evidence Desk</Button>
             </Link>

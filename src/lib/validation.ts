@@ -3,6 +3,13 @@ import {
   ACCESS_REQUEST_TYPES,
   IDENTITY_PROVIDERS,
 } from "@/lib/access";
+import {
+  KEV_ASSET_TYPES,
+  KEV_EXPOSURE_STATUSES,
+  KEV_PATCH_AVAILABILITIES,
+  KEV_SOURCES,
+  KEV_STATUSES,
+} from "@/lib/kev";
 import { RISK_AREAS } from "@/lib/leads";
 import { MODULES } from "@/lib/modules";
 import { VULNERABILITY_SOURCES } from "@/lib/vulnerability";
@@ -21,6 +28,32 @@ const vulnerabilitySourceValues = VULNERABILITY_SOURCES.map((s) => s.value) as [
   string,
   ...string[],
 ];
+const kevSourceValues = KEV_SOURCES.map((s) => s.value) as [string, ...string[]];
+const kevStatusValues = KEV_STATUSES.map((s) => s.value) as [string, ...string[]];
+const kevAssetTypeValues = KEV_ASSET_TYPES.map((a) => a.value) as [string, ...string[]];
+const kevExposureStatusValues = KEV_EXPOSURE_STATUSES.map((e) => e.value) as [
+  string,
+  ...string[],
+];
+const kevPatchAvailabilityValues = KEV_PATCH_AVAILABILITIES.map((p) => p.value) as [
+  string,
+  ...string[],
+];
+
+export const KevContextInput = z.object({
+  cve: z.string().min(1).max(80),
+  kevStatus: z.enum(kevStatusValues),
+  source: z.enum(kevSourceValues),
+  affectedAsset: z.string().min(1).max(200),
+  assetType: z.enum(kevAssetTypeValues),
+  exposureStatus: z.enum(kevExposureStatusValues),
+  patchAvailability: z.enum(kevPatchAvailabilityValues),
+  remediationOwner: z.string().min(1).max(160),
+  businessReasonForDelay: z.string().min(1).max(4000),
+  executiveSummaryNote: z.string().max(4000).optional(),
+  emergency: z.boolean().optional(),
+});
+export type KevContextInputType = z.infer<typeof KevContextInput>;
 
 export const VulnerabilityContextInput = z.object({
   source: z.enum(vulnerabilitySourceValues),
@@ -84,6 +117,7 @@ export const RiskRecordCreateInput = z.object({
   sourceReferences: z.array(sourceReferenceSchema).max(20).default([]),
   accessContext: AccessContextInput.optional(),
   vulnerabilityContext: VulnerabilityContextInput.optional(),
+  kevContext: KevContextInput.optional(),
 });
 export type RiskRecordCreateInputType = z.infer<typeof RiskRecordCreateInput>;
 

@@ -56,6 +56,11 @@ const CATEGORIES: Category[] = [
     note: "Source of vulnerability, code, container, cloud, and pen test findings.",
     items: [
       {
+        name: "CISA KEV reference",
+        fit: "Works with — KEV-aware review against the public CISA KEV reference. Approval record layer only; no partnership or government approval implied.",
+        recipe: "Recipe available: CVE match → KEV Exposure Review.",
+      },
+      {
         name: "Fortify",
         fit: "Works with — SAST findings flow to Vulnerability Accept.",
         recipe: "Recipe available: SSC webhook → Risk Record.",

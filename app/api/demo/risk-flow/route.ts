@@ -48,11 +48,32 @@ const VULNERABILITY_ACCEPT_DEMO_FLOW = [
   "Ticket or release workflow updated downstream",
 ];
 
+const KEV_EXPOSURE_REVIEW_EXAMPLE_EVENT = {
+  source: "tenable",
+  event_type: "kev_exposure_review",
+  cve: "CVE-2024-3094",
+  affected_asset: "internet-facing-linux-build-server",
+  exposure_status: "exposed",
+  patch_availability: "patch available",
+  risk_level: "critical",
+  business_justification:
+    "Production dependency requires maintenance window before remediation",
+};
+
+const KEV_EXPOSURE_REVIEW_DEMO_FLOW = [
+  "Known exploited vulnerability exposure detected by Tenable / Wiz / Qualys / Rapid7 / GitHub / Fortify / CISA KEV reference",
+  "TrustAccept creates a KEV Exposure Review record",
+  "Owner accepts exposure, rejects acceptance, or requires remediation via the hosted approval page",
+  "Evidence packet created in the Evidence Desk",
+  "Ticket, risk register, or remediation workflow updated downstream",
+];
+
 export async function GET() {
   try {
     const user = requireDashboardAccess();
     const accessRecords = listRiskRecordsByModule(user, "access-accept");
     const vulnerabilityRecords = listRiskRecordsByModule(user, "vulnerability-accept");
+    const kevRecords = listRiskRecordsByModule(user, "kev-exposure-review");
     return NextResponse.json({
       organizationId: user.organizationId,
       counts: {
@@ -67,6 +88,9 @@ export async function GET() {
         vulnerabilityAcceptReleaseBlocking: vulnerabilityRecords.filter(
           (r) => r.vulnerabilityContext?.releaseBlocking,
         ).length,
+        kevExposureReview: kevRecords.length,
+        kevExposureReviewPending: kevRecords.filter((r) => r.status === "pending").length,
+        kevExposureReviewEmergency: kevRecords.filter((r) => r.kevContext?.emergency).length,
       },
       pending: listPendingRiskRecords(user).map((r) => ({
         id: r.id,
@@ -85,6 +109,11 @@ export async function GET() {
         event: VULNERABILITY_ACCEPT_EXAMPLE_EVENT,
         flow: VULNERABILITY_ACCEPT_DEMO_FLOW,
         sampleRecordId: vulnerabilityRecords[0]?.id ?? null,
+      },
+      kevExposureReviewExample: {
+        event: KEV_EXPOSURE_REVIEW_EXAMPLE_EVENT,
+        flow: KEV_EXPOSURE_REVIEW_DEMO_FLOW,
+        sampleRecordId: kevRecords[0]?.id ?? null,
       },
     });
   } catch (err) {

@@ -91,6 +91,25 @@ const VULNERABILITY_FLOW = [
   "Ticket or release workflow updated downstream",
 ];
 
+const KEV_EVENT_JSON = `{
+  "source": "tenable",
+  "event_type": "kev_exposure_review",
+  "cve": "CVE-2024-3094",
+  "affected_asset": "internet-facing-linux-build-server",
+  "exposure_status": "exposed",
+  "patch_availability": "patch available",
+  "risk_level": "critical",
+  "business_justification": "Production dependency requires maintenance window before remediation"
+}`;
+
+const KEV_FLOW = [
+  "Known exploited vulnerability exposure detected by Tenable / Wiz / Qualys / Rapid7 / GitHub / Fortify / CISA KEV reference",
+  "TrustAccept creates a KEV Exposure Review record",
+  "Owner accepts exposure, rejects acceptance, or requires remediation via the hosted approval page",
+  "Evidence packet created in the Evidence Desk",
+  "Ticket, risk register, or remediation workflow updated downstream",
+];
+
 export default function Page() {
   return (
     <div>
@@ -211,6 +230,52 @@ export default function Page() {
                 </Link>
                 <Link href="/approve/ra-vul-001" className="text-sm text-primary">
                   See a live Vulnerability Accept decision →
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Section>
+
+      <Section>
+        <SectionHeader
+          eyebrow="KEV Exposure Review API demo"
+          title="Known exploited vulnerability exposure → defensible decision"
+          subtitle="A KEV Exposure Review record is the same RiskRecord shape with module = kev-exposure-review and a kevContext block describing the CVE, KEV status, asset, exposure, patch availability, and remediation owner. TrustAccept is CISA KEV-aware; it does not imply CISA approval or certification."
+        />
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+          <Card>
+            <CardContent className="overflow-x-auto p-6">
+              <p className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">
+                Inbound KEV-aware event
+              </p>
+              <pre className="whitespace-pre-wrap font-mono text-xs text-muted-foreground">
+                {KEV_EVENT_JSON}
+              </pre>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-sm">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                Demo flow
+              </p>
+              <ol className="mt-3 space-y-2 text-muted-foreground">
+                {KEV_FLOW.map((step, idx) => (
+                  <li key={step} className="flex gap-3">
+                    <span className="text-primary">{idx + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Link
+                  href="/dashboard/cisa-kev-review/findings"
+                  className="text-sm text-primary"
+                >
+                  Open the demo KEV finding feed →
+                </Link>
+                <Link href="/approve/ra-kev-001" className="text-sm text-primary">
+                  See a live KEV Exposure Review decision →
                 </Link>
               </div>
             </CardContent>

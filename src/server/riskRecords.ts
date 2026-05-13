@@ -1,4 +1,5 @@
 import type { AccessContext } from "@/lib/access";
+import type { KevContext } from "@/lib/kev";
 import type { VulnerabilityContext } from "@/lib/vulnerability";
 import { deriveRiskScore } from "@/lib/seed-data";
 import type {
@@ -42,6 +43,7 @@ export interface RiskRecordCreateData {
   sourceReferences: SourceReference[];
   accessContext?: AccessContext;
   vulnerabilityContext?: VulnerabilityContext;
+  kevContext?: KevContext;
 }
 
 export interface RiskRecordUpdateData
@@ -168,6 +170,7 @@ export function createRiskRecord(
     sourceReferences: data.sourceReferences,
     accessContext: data.accessContext,
     vulnerabilityContext: data.vulnerabilityContext,
+    kevContext: data.kevContext,
     auditTimeline: [initialEntry],
     createdAt: now,
     updatedAt: now,

@@ -35,6 +35,8 @@ describe("ctaRouteFor", () => {
         "access_accept_secondary",
         "homepage_primary",
         "homepage_secondary",
+        "kev_exposure_review_primary",
+        "kev_exposure_review_secondary",
         "managed_evidence_desk",
         "pack_48hour",
         "pilot",

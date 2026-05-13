@@ -116,11 +116,24 @@ const RELEASE_BLOCKING_VULNERABILITY_LABELS: ApprovalLabels = {
   remediate: "Require Fix",
 };
 
+const DEFAULT_KEV_LABELS: ApprovalLabels = {
+  accept: "Accept Exposure",
+  reject: "Reject Acceptance",
+  remediate: "Require Remediation",
+};
+
+const EMERGENCY_KEV_LABELS: ApprovalLabels = {
+  accept: "Emergency Accept",
+  reject: "Escalate Now",
+  remediate: "Require Immediate Remediation",
+};
+
 /**
- * Resolve approval labels for a record. Access Accept and Vulnerability
- * Accept swap to module-specific labels; suspicious login and
- * release-blocking findings swap further. Every other module falls
- * back to its declared module labels.
+ * Resolve approval labels for a record. Access Accept, Vulnerability
+ * Accept, and KEV Exposure Review swap to module-specific labels;
+ * suspicious login, release-blocking findings, and emergency KEV
+ * exposure swap further. Every other module falls back to its
+ * declared module labels.
  */
 export function getApprovalLabels(record: RiskRecord): ApprovalLabels {
   if (record.module === "access-accept") {
@@ -134,6 +147,12 @@ export function getApprovalLabels(record: RiskRecord): ApprovalLabels {
       return RELEASE_BLOCKING_VULNERABILITY_LABELS;
     }
     return DEFAULT_VULNERABILITY_LABELS;
+  }
+  if (record.module === "kev-exposure-review") {
+    if (record.kevContext?.emergency) {
+      return EMERGENCY_KEV_LABELS;
+    }
+    return DEFAULT_KEV_LABELS;
   }
   const m = MODULES.find((meta) => meta.key === record.module);
   if (!m) throw new Error(`Unknown module: ${record.module}`);

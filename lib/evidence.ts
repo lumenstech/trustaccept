@@ -1,4 +1,11 @@
 import { getAccessRequestMeta, getIdentityProviderMeta } from "./access";
+import {
+  getKevAssetTypeLabel,
+  getKevExposureStatusLabel,
+  getKevPatchAvailabilityLabel,
+  getKevSourceMeta,
+  getKevStatusLabel,
+} from "./kev";
 import { getModule } from "./modules";
 import type { RiskRecord } from "./types";
 import { getVulnerabilitySourceMeta } from "./vulnerability";
@@ -29,6 +36,20 @@ export interface VulnerabilityPacketFields {
   releaseBlocking: boolean;
 }
 
+export interface KevPacketFields {
+  cve: string;
+  kevStatus: string;
+  source: string;
+  affectedAsset: string;
+  assetType: string;
+  exposureStatus: string;
+  patchAvailability: string;
+  remediationOwner: string;
+  businessReasonForDelay: string;
+  executiveSummaryNote: string;
+  emergency: boolean;
+}
+
 export interface EvidencePacketSummary {
   decisionId: string;
   module: string;
@@ -42,6 +63,7 @@ export interface EvidencePacketSummary {
   executiveSummary: string;
   accessFields?: AccessPacketFields;
   vulnerabilityFields?: VulnerabilityPacketFields;
+  kevFields?: KevPacketFields;
 }
 
 function decisionOutcomeLabel(record: RiskRecord): string {
@@ -105,6 +127,23 @@ export function summarizeRecordForEvidence(record: RiskRecord): EvidencePacketSu
     };
   }
 
+  if (record.module === "kev-exposure-review" && record.kevContext) {
+    const ctx = record.kevContext;
+    summary.kevFields = {
+      cve: ctx.cve,
+      kevStatus: getKevStatusLabel(ctx.kevStatus),
+      source: getKevSourceMeta(ctx.source).label,
+      affectedAsset: ctx.affectedAsset,
+      assetType: getKevAssetTypeLabel(ctx.assetType),
+      exposureStatus: getKevExposureStatusLabel(ctx.exposureStatus),
+      patchAvailability: getKevPatchAvailabilityLabel(ctx.patchAvailability),
+      remediationOwner: ctx.remediationOwner,
+      businessReasonForDelay: ctx.businessReasonForDelay,
+      executiveSummaryNote: ctx.executiveSummaryNote ?? "",
+      emergency: ctx.emergency ?? false,
+    };
+  }
+
   return summary;
 }
 
@@ -114,6 +153,9 @@ export function buildExecutiveSummary(record: RiskRecord): string {
   }
   if (record.module === "vulnerability-accept" && record.vulnerabilityContext) {
     return buildVulnerabilityExecutiveSummary(record);
+  }
+  if (record.module === "kev-exposure-review" && record.kevContext) {
+    return buildKevExecutiveSummary(record);
   }
 
   const module = getModule(record.module);
@@ -188,5 +230,31 @@ export function buildVulnerabilityExecutiveSummary(record: RiskRecord): string {
     `Owner ${record.owner} (${record.department}).`,
     lifecycle + expires + review,
     "This record is NIST-aligned, CISA KEV-aware, and designed to support audit evidence.",
+  ].join(" ");
+}
+
+export function buildKevExecutiveSummary(record: RiskRecord): string {
+  const ctx = record.kevContext;
+  if (!ctx) {
+    return buildExecutiveSummary({ ...record, module: "kev-exposure-review" });
+  }
+  const sourceLabel = getKevSourceMeta(ctx.source).label;
+  const expires = record.expirationDate
+    ? ` Expiration set for ${record.expirationDate}.`
+    : "";
+  const review = record.reviewDate ? ` Review scheduled ${record.reviewDate}.` : "";
+  const lifecycle = record.decision
+    ? `Decision recorded: ${record.decision}.`
+    : "Decision pending.";
+  const emergency = ctx.emergency ? " Emergency exposure." : "";
+  const owner = ctx.remediationOwner ? ` Remediation owner ${ctx.remediationOwner}.` : "";
+
+  return [
+    `This KEV Exposure Review record documents a CISA KEV-aware exposure decision, including affected asset, exposure status, patch availability, remediation owner, compensating controls, expiration date, and review timeline.`,
+    `Record ${record.id} — ${ctx.cve} (${getKevStatusLabel(ctx.kevStatus)}) flagged by ${sourceLabel} on ${ctx.affectedAsset} (${getKevAssetTypeLabel(ctx.assetType)}).`,
+    `Exposure status ${getKevExposureStatusLabel(ctx.exposureStatus)}; patch availability ${getKevPatchAvailabilityLabel(ctx.patchAvailability)}.${emergency}${owner}`,
+    `Owner of record ${record.owner} (${record.department}).`,
+    lifecycle + expires + review,
+    "This record is CISA KEV-aware, NIST-aligned, framework-informed, and designed to support audit evidence.",
   ].join(" ");
 }

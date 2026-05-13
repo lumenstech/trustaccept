@@ -889,9 +889,9 @@ const RAW_RECORDS: RiskRecord[] = [
     module: "kev-exposure-review",
     title: "Known exploited vulnerability exposure requires remediation decision",
     description:
-      "CISA KEV-listed vulnerability CVE-2026-1455 detected on three internet-facing gateways. Owner must decide between immediate patching, isolation, or formal risk acceptance.",
+      "Known exploited vulnerability CVE-2026-1455 detected on three internet-facing gateways. Owner must decide between immediate patching, isolation, or formal exposure acceptance.",
     sourceSystem: "Tenable",
-    sourceType: "vuln.kev_match",
+    sourceType: "kev.tenable",
     riskLevel: "critical",
     status: "pending",
     owner: "Sara Romero",
@@ -902,22 +902,401 @@ const RAW_RECORDS: RiskRecord[] = [
     compensatingControls:
       "Geo-fenced ingress, signature-based IPS rule deployed, anomalous traffic alerting elevated.",
     evidenceSummary:
-      "CISA KEV listing, Tenable host scan, IPS signature deployment, network segmentation diagram.",
+      "CISA KEV reference, Tenable host scan, IPS signature deployment, network segmentation diagram.",
     businessJustification:
       "Patch requires a maintenance window; partner integrations dependent on the gateways are mid-cutover.",
     technicalContext:
-      "Affected asset class: edge gateway (3 hosts). KEV due date: May 22. Exploit observed in the wild; signature available.",
+      "Affected asset class: edge gateway (3 hosts). Exploit observed in the wild; signature available.",
     frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 RA-5"],
     sourceReferences: [
-      { label: "CVE-2026-1455", system: "CISA KEV", externalId: "CVE-2026-1455" },
+      { label: "CVE-2026-1455", system: "CISA KEV reference", externalId: "CVE-2026-1455" },
       { label: "Tenable scan 99182", system: "Tenable", externalId: "99182" },
     ],
+    kevContext: {
+      cve: "CVE-2026-1455",
+      kevStatus: "known-exploited",
+      source: "tenable",
+      affectedAsset: "edge-gw-{01,02,03}",
+      assetType: "network-appliance",
+      exposureStatus: "exposed",
+      patchAvailability: "patch-available",
+      remediationOwner: "Sara Romero",
+      businessReasonForDelay:
+        "Partner integrations are mid-cutover; patch requires a maintenance window.",
+      executiveSummaryNote:
+        "Exposure scheduled for remediation in the May 29 maintenance window; signature-based IPS deployed in the interim.",
+      emergency: false,
+    },
     auditTimeline: [
       {
         actor: "TrustAccept",
         action: "matched",
         detail: "KEV catalog match created Risk Record.",
         occurredAt: "2026-05-12T20:11:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-002",
+    module: "kev-exposure-review",
+    title: "Patch not immediately possible due to production dependency",
+    description:
+      "Known exploited vulnerability on a server with a coordinated production dependency. Patch window blocked by month-end close.",
+    sourceSystem: "Wiz",
+    sourceType: "kev.wiz",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Jordan Pak",
+    department: "Application Security",
+    dueDate: "2026-05-20",
+    expirationDate: "2026-06-05",
+    reviewDate: "2026-05-20",
+    compensatingControls:
+      "Network segmentation tightened; outbound DNS sinkhole enabled; monitoring uplifted on the affected segment.",
+    evidenceSummary:
+      "Wiz finding WIZ-KEV-2122, change calendar excerpt, segmentation diagram.",
+    businessJustification:
+      "Month-end close depends on the server's ledger integrations; patch deferred to the June 5 window.",
+    technicalContext:
+      "Internal server hosts financial ledger integrations; partial mitigation in place pending patch.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "SOC 2 CC7.1"],
+    sourceReferences: [
+      { label: "CVE-2025-21010", system: "CISA KEV reference", externalId: "CVE-2025-21010" },
+      { label: "Wiz WIZ-KEV-2122", system: "Wiz", externalId: "WIZ-KEV-2122" },
+    ],
+    kevContext: {
+      cve: "CVE-2025-21010",
+      kevStatus: "known-exploited",
+      source: "wiz",
+      affectedAsset: "ledger-prod-app-02",
+      assetType: "internal-server",
+      exposureStatus: "partially-mitigated",
+      patchAvailability: "patch-available",
+      remediationOwner: "Jordan Pak",
+      businessReasonForDelay:
+        "Month-end close window prevents an immediate maintenance pause.",
+      executiveSummaryNote:
+        "Patch scheduled for the June 5 change window; segmentation and monitoring uplifted in the interim.",
+      emergency: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Wiz",
+        action: "ingested",
+        detail: "KEV-aware finding raised; routed to KEV Exposure Review.",
+        occurredAt: "2026-05-12T22:05:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-003",
+    module: "kev-exposure-review",
+    title: "Temporary exposure accepted with compensating controls",
+    description:
+      "Cloud workload exposure mitigated by a temporary firewall rule; vendor patch ETA two weeks. Exposure acceptance with compensating controls requested.",
+    sourceSystem: "Wiz",
+    sourceType: "kev.wiz",
+    riskLevel: "critical",
+    status: "pending",
+    owner: "Marcus Lee",
+    department: "Platform SRE",
+    dueDate: "2026-05-22",
+    expirationDate: "2026-05-27",
+    reviewDate: "2026-05-22",
+    compensatingControls:
+      "Geo-restricted firewall rule, anomalous request detection, alerting tightened on the api-edge service.",
+    evidenceSummary:
+      "Wiz finding WIZ-KEV-3309, firewall rule diff, prior temporary acceptance precedent.",
+    businessJustification:
+      "Partner traffic relies on api-edge for product-launch readiness; temporary acceptance limits customer impact.",
+    technicalContext:
+      "Cloud workload exposure currently constrained to known partner ranges; vendor patch ETA May 27.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 SC-7"],
+    sourceReferences: [
+      { label: "CVE-2026-11290", system: "CISA KEV reference", externalId: "CVE-2026-11290" },
+      { label: "Wiz WIZ-KEV-3309", system: "Wiz", externalId: "WIZ-KEV-3309" },
+    ],
+    kevContext: {
+      cve: "CVE-2026-11290",
+      kevStatus: "known-exploited",
+      source: "wiz",
+      affectedAsset: "prod-eu-1 / api-edge",
+      assetType: "cloud-resource",
+      exposureStatus: "partially-mitigated",
+      patchAvailability: "compensating-control-only",
+      remediationOwner: "Marcus Lee",
+      businessReasonForDelay:
+        "Vendor patch not yet released; geo-restricted firewall rule provides the only mitigation today.",
+      executiveSummaryNote:
+        "Temporary acceptance is bound to the May 27 expiration with required review on the vendor patch ETA.",
+      emergency: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Wiz",
+        action: "ingested",
+        detail: "Cloud KEV exposure routed to KEV Exposure Review.",
+        occurredAt: "2026-05-12T23:11:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-004",
+    module: "kev-exposure-review",
+    title: "Executive owner required for remediation delay",
+    description:
+      "Legacy ERP cannot be patched without vendor recertification. The affected asset is not internet-facing, but executive risk acceptance is required to extend the exposure window.",
+    sourceSystem: "Qualys",
+    sourceType: "kev.qualys",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Alex Greene",
+    department: "Office of the CISO",
+    dueDate: "2026-05-30",
+    expirationDate: "2026-08-30",
+    reviewDate: "2026-08-30",
+    compensatingControls:
+      "Asset isolated to a dedicated VLAN; jump host enforced; audit logging tightened on privileged access.",
+    evidenceSummary:
+      "Qualys finding QUALYS-KEV-77202, ERP vendor advisory KB-7710, isolation diagram.",
+    businessJustification:
+      "Vendor recertification timeline is contractual; executive risk acceptance documents the remediation delay.",
+    technicalContext:
+      "Legacy ERP runs business-critical processes; vendor patch requires recertification and pilot window.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 PM-9"],
+    sourceReferences: [
+      { label: "CVE-2023-98010", system: "CISA KEV reference", externalId: "CVE-2023-98010" },
+      { label: "Qualys QUALYS-KEV-77202", system: "Qualys", externalId: "QUALYS-KEV-77202" },
+    ],
+    kevContext: {
+      cve: "CVE-2023-98010",
+      kevStatus: "known-exploited",
+      source: "qualys",
+      affectedAsset: "legacy-erp-001",
+      assetType: "application",
+      exposureStatus: "not-externally-exposed",
+      patchAvailability: "patch-not-available",
+      remediationOwner: "Alex Greene",
+      businessReasonForDelay:
+        "Vendor recertification is contractually scheduled; isolation acts as the interim control.",
+      executiveSummaryNote:
+        "Risk acceptance signed at the Office of the CISO; quarterly review scheduled for August 30.",
+      emergency: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Qualys",
+        action: "ingested",
+        detail: "KEV-aware finding on legacy ERP routed for executive review.",
+        occurredAt: "2026-05-12T18:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-005",
+    module: "kev-exposure-review",
+    title: "Firewall mitigation accepted pending patch window",
+    description:
+      "Known exploited vulnerability on an internal server is currently mitigated by a deny-by-default firewall rule. Acceptance is requested until the next patch window.",
+    sourceSystem: "Tenable",
+    sourceType: "kev.tenable",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Lena Petrova",
+    department: "IT Operations",
+    dueDate: "2026-05-24",
+    expirationDate: "2026-06-12",
+    reviewDate: "2026-05-24",
+    compensatingControls:
+      "Firewall mitigation in place across all ingress paths; runtime detection elevated; weekly attestation by owner.",
+    evidenceSummary:
+      "Tenable TENABLE-KEV-44211, firewall policy diff, prior similar precedent.",
+    businessJustification:
+      "Patch window aligns with the platform's June 12 monthly maintenance; mitigation prevents lateral exposure.",
+    technicalContext:
+      "Internal server; KEV-aware finding; firewall mitigation effective at the perimeter and the segment.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 SC-7"],
+    sourceReferences: [
+      { label: "CVE-2025-32011", system: "CISA KEV reference", externalId: "CVE-2025-32011" },
+      { label: "Tenable TENABLE-KEV-44211", system: "Tenable", externalId: "TENABLE-KEV-44211" },
+    ],
+    kevContext: {
+      cve: "CVE-2025-32011",
+      kevStatus: "known-exploited",
+      source: "tenable",
+      affectedAsset: "ops-internal-app-03",
+      assetType: "internal-server",
+      exposureStatus: "partially-mitigated",
+      patchAvailability: "patch-available",
+      remediationOwner: "Lena Petrova",
+      businessReasonForDelay:
+        "Monthly maintenance window is the standard cadence; the firewall mitigation is sufficient until then.",
+      executiveSummaryNote:
+        "Acceptance bound to the June 12 maintenance window; weekly owner attestation required.",
+      emergency: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Tenable",
+        action: "ingested",
+        detail: "KEV-aware finding routed for KEV Exposure Review.",
+        occurredAt: "2026-05-13T07:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-006",
+    module: "kev-exposure-review",
+    title: "Asset exposure requires emergency escalation",
+    description:
+      "Internet-facing portal exposed to an actively exploited CVE. Emergency remediation required within 24 hours.",
+    sourceSystem: "Tenable",
+    sourceType: "kev.tenable",
+    riskLevel: "critical",
+    status: "pending",
+    owner: "Sara Romero",
+    department: "Infrastructure Security",
+    dueDate: "2026-05-14",
+    expirationDate: "2026-05-15",
+    reviewDate: "2026-05-14",
+    compensatingControls:
+      "Emergency edge rule blocking the exploitable path; on-call engaged; incident channel opened.",
+    evidenceSummary:
+      "Tenable TENABLE-KEV-58811, incident PD-INC-50308, edge rule deployment record.",
+    businessJustification:
+      "Active exploitation in the wild against a customer-facing portal forces emergency handling.",
+    technicalContext:
+      "Internet-facing portal; patch available; emergency remediation scheduled within 24 hours.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 IR-4"],
+    sourceReferences: [
+      { label: "CVE-2024-58811", system: "CISA KEV reference", externalId: "CVE-2024-58811" },
+      { label: "Tenable TENABLE-KEV-58811", system: "Tenable", externalId: "TENABLE-KEV-58811" },
+    ],
+    kevContext: {
+      cve: "CVE-2024-58811",
+      kevStatus: "known-exploited",
+      source: "tenable",
+      affectedAsset: "external-portal-prod",
+      assetType: "internet-facing-server",
+      exposureStatus: "exposed",
+      patchAvailability: "patch-available",
+      remediationOwner: "Sara Romero",
+      businessReasonForDelay:
+        "No delay accepted — emergency remediation in progress; record exists to capture decision and evidence.",
+      executiveSummaryNote:
+        "Emergency exposure; remediate within 24 hours; on-call engaged; incident channel open.",
+      emergency: true,
+    },
+    auditTimeline: [
+      {
+        actor: "Tenable",
+        action: "ingested",
+        detail: "Active-exploitation KEV finding raised; routed for emergency handling.",
+        occurredAt: "2026-05-13T10:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-007",
+    module: "kev-exposure-review",
+    title: "Internet-facing asset requires KEV exposure review",
+    description:
+      "Rapid7 surfaced a KEV-aware finding on a CI runner pool. The asset is not internet-facing but operates inside a sensitive build context.",
+    sourceSystem: "Rapid7",
+    sourceType: "kev.rapid7",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Dana Okafor",
+    department: "Engineering Productivity",
+    dueDate: "2026-05-26",
+    expirationDate: "2026-06-10",
+    reviewDate: "2026-05-26",
+    compensatingControls:
+      "Build context isolated; SBOM verification enabled; signed artifact policy enforced; access scoped to release engineers.",
+    evidenceSummary:
+      "Rapid7 R7-KEV-22120, SBOM verification snapshot, signed artifact policy diff.",
+    businessJustification:
+      "Patch requires a coordinated CI runner rebuild; build cadence prevents an unplanned interruption.",
+    technicalContext:
+      "Internal CI runner pool; KEV-aware finding mapped to Rapid7 advisory; remediation scheduled.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST SSDF PW.8"],
+    sourceReferences: [
+      { label: "CVE-2026-22120", system: "CISA KEV reference", externalId: "CVE-2026-22120" },
+      { label: "Rapid7 R7-KEV-22120", system: "Rapid7", externalId: "R7-KEV-22120" },
+    ],
+    kevContext: {
+      cve: "CVE-2026-22120",
+      kevStatus: "known-exploited",
+      source: "rapid7",
+      affectedAsset: "ci-runner-pool-2",
+      assetType: "internal-server",
+      exposureStatus: "not-externally-exposed",
+      patchAvailability: "patch-available",
+      remediationOwner: "Dana Okafor",
+      businessReasonForDelay:
+        "Coordinated CI runner pool rebuild required to avoid release cadence disruption.",
+      executiveSummaryNote:
+        "Remediation scheduled for the June 10 release window; signed-artifact policy mitigates interim risk.",
+      emergency: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Rapid7",
+        action: "ingested",
+        detail: "KEV-aware finding routed for KEV Exposure Review.",
+        occurredAt: "2026-05-13T05:42:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-kev-008",
+    module: "kev-exposure-review",
+    title: "Patch exception requires expiration date",
+    description:
+      "Vendor patch is not yet available for a KEV-listed vulnerability. A workaround is in place; exposure acceptance is requested with a firm expiration.",
+    sourceSystem: "Rapid7",
+    sourceType: "kev.rapid7",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Jordan Pak",
+    department: "Application Security",
+    dueDate: "2026-05-19",
+    expirationDate: "2026-07-10",
+    reviewDate: "2026-07-10",
+    compensatingControls:
+      "Vendor-provided workaround applied; protocol-level filters enabled; monitoring tightened on the mail gateway.",
+    evidenceSummary:
+      "Rapid7 R7-KEV-44440, vendor advisory KB-7710, configuration diff.",
+    businessJustification:
+      "Vendor patch is on the roadmap for the July 10 release; workaround mitigates exposure in the interim.",
+    technicalContext:
+      "Network appliance running a mail gateway; KEV-aware finding mapped to a vendor advisory.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 RA-5"],
+    sourceReferences: [
+      { label: "CVE-2025-44440", system: "CISA KEV reference", externalId: "CVE-2025-44440" },
+      { label: "Rapid7 R7-KEV-44440", system: "Rapid7", externalId: "R7-KEV-44440" },
+    ],
+    kevContext: {
+      cve: "CVE-2025-44440",
+      kevStatus: "known-exploited",
+      source: "rapid7",
+      affectedAsset: "vendor-mailgw",
+      assetType: "network-appliance",
+      exposureStatus: "exposed",
+      patchAvailability: "vendor-workaround",
+      remediationOwner: "Jordan Pak",
+      businessReasonForDelay:
+        "Vendor patch is on the July 10 release roadmap; workaround mitigates exposure in the interim.",
+      executiveSummaryNote:
+        "Exception bound to the July 10 vendor release with required review on that date.",
+      emergency: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Rapid7",
+        action: "ingested",
+        detail: "Vendor-workaround KEV finding routed for KEV Exposure Review.",
+        occurredAt: "2026-05-12T19:55:00Z",
       },
     ],
   },

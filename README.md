@@ -33,6 +33,84 @@ support powered by SequenceNow.
 - Seed data for all seven modules
 - Mock authentication (production auth is delivered via SequenceNow)
 
+## KEV Exposure Review (third deep module)
+
+KEV Exposure Review creates CISA KEV-aware records for known exploited
+vulnerability exposure, remediation delays, compensating controls, and
+executive risk summaries.
+
+TrustAccept does not replace CISA, vulnerability scanners, patch management
+systems, asset inventory tools, Jira, ServiceNow, Tenable, Wiz, Qualys, Rapid7,
+GitHub, or Fortify. TrustAccept creates the approval, acceptance, remediation,
+and evidence layer around the known exploited vulnerability decisions those
+systems expose. TrustAccept is **CISA KEV-aware**; it does not imply CISA
+approval, CISA certification, NIST certification, guaranteed compliance,
+auditor approval, or that risk is eliminated.
+
+### Routes
+
+- `/cisa-kev-review` — enhanced marketing page (problem framing, CISA + scanner clarification, eight example decision cards, four-step workflow timeline, evidence packet preview, source-system cards, primary CTA **Book Risk Acceptance Review** and secondary CTA **Create KEV Demo Record**).
+- `/dashboard/cisa-kev-review` — KEV Exposure Review command center. Eight summary cards (pending, critical, internet-facing assets, expiring temporary acceptances, remediation overdue, compensating controls active, executive owner required, evidence-ready). Records table with title, CVE, source, asset, exposure, patch availability, severity, status, owner, due/expiration/review.
+- `/dashboard/cisa-kev-review/new` — KEV-specific intake form (CVE, KEV status, source, affected asset, asset type, exposure status, patch availability, business reason for delay, remediation owner, owner of record, due/expiration/review dates, exposure acceptance window auto-fill, compensating controls, evidence summary, executive summary note, emergency flag). POSTs to `/api/risk-records` with `module = kev-exposure-review` and a `kevContext` payload.
+- `/dashboard/cisa-kev-review/findings` — mock KEV finding feed (Tenable, Wiz, Qualys, Rapid7). Each card prefills the intake form via query params (`cve`, `source`, `asset`, `assetType`, `exposureStatus`, `patchAvailability`, `riskLevel`, `kevStatus`, `emergency`).
+
+### Module-aware decision labels
+
+| KEV Exposure Review record type | Accept | Reject | Remediate |
+| --- | --- | --- | --- |
+| Default KEV Exposure Review | Accept Exposure | Reject Acceptance | Require Remediation |
+| Emergency exposure record | Emergency Accept | Escalate Now | Require Immediate Remediation |
+
+The resolver (`getApprovalLabels` in `lib/access.ts`) now also branches on KEV
+records and, when `kevContext.emergency` is true, swaps to the emergency label
+set. Access Accept and Vulnerability Accept labels are unchanged.
+
+### Demo workflow
+
+```
+1. Known exploited vulnerability exposure detected by Tenable / Wiz / Qualys / Rapid7 / GitHub / Fortify / CISA KEV reference
+2. TrustAccept creates a KEV Exposure Review record
+3. Owner accepts exposure, rejects acceptance, or requires remediation via the hosted approval page
+4. Evidence packet created in the Evidence Desk
+5. Ticket, risk register, or remediation workflow updated downstream
+```
+
+Inbound KEV-aware event payload (also returned by `/api/demo/risk-flow` and
+shown on `/docs`):
+
+```json
+{
+  "source": "tenable",
+  "event_type": "kev_exposure_review",
+  "cve": "CVE-2024-3094",
+  "affected_asset": "internet-facing-linux-build-server",
+  "exposure_status": "exposed",
+  "patch_availability": "patch available",
+  "risk_level": "critical",
+  "business_justification": "Production dependency requires maintenance window before remediation"
+}
+```
+
+### Safe language
+
+Allowed: CISA KEV-aware, known exploited vulnerability exposure, designed to
+support audit evidence, framework-informed, evidence-ready, compensating
+controls, remediation owner, exposure decision, review date, expiration date.
+Never used: CISA approved, CISA certified, NIST certified, guaranteed
+compliant, eliminates risk, auditor approved. There is an explicit guardrail
+test that scans every KEV seed record and the KEV executive summary generator
+for those phrases.
+
+### Verification commands
+
+```bash
+npm install
+npm run prisma:generate
+npm run typecheck
+npm test
+npm run build
+```
+
 ## Vulnerability Accept (second deep module)
 
 Vulnerability Accept converts Fortify, SAST, SCA, GitHub, cloud scanner, and
@@ -417,6 +495,8 @@ module:
 | Access Accept (suspicious login) | Accept Login Risk | Reject / Block | Escalate Login |
 | Vulnerability Accept (default) | Accept Finding Risk | Reject Acceptance | Require Remediation |
 | Vulnerability Accept (release-blocking) | Accept for Release | Block Release | Require Fix |
+| KEV Exposure Review (default) | Accept Exposure | Reject Acceptance | Require Remediation |
+| KEV Exposure Review (emergency) | Emergency Accept | Escalate Now | Require Immediate Remediation |
 | Secure Release Gate | Approve Release | Block Release | Require Remediation |
 | Device Accept | Approve Device | Reject Device | Require More Evidence |
 | Evidence Desk | Mark Reviewed | Request Update | Export Evidence |

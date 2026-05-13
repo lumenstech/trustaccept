@@ -110,6 +110,39 @@ export default function EvidencePacketPage({ params }: { params: { id: string } 
           </Card>
         ) : null}
 
+        {summary.kevFields ? (
+          <Card>
+            <CardHeader>
+              <Badge tone="info">KEV Exposure Review</Badge>
+              <CardTitle className="mt-2">Known exploited vulnerability context</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                <Fact label="CVE" value={summary.kevFields.cve} />
+                <Fact label="KEV status" value={summary.kevFields.kevStatus} />
+                <Fact label="Source" value={summary.kevFields.source} />
+                <Fact label="Affected asset" value={summary.kevFields.affectedAsset} />
+                <Fact label="Asset type" value={summary.kevFields.assetType} />
+                <Fact label="Exposure status" value={summary.kevFields.exposureStatus} />
+                <Fact label="Patch availability" value={summary.kevFields.patchAvailability} />
+                <Fact label="Remediation owner" value={summary.kevFields.remediationOwner} />
+                <Fact label="Emergency exposure" value={summary.kevFields.emergency ? "Yes" : "No"} />
+                <Fact label="Review date" value={summary.reviewDate} />
+              </dl>
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <Fact
+                  label="Business reason for delay"
+                  value={summary.kevFields.businessReasonForDelay}
+                />
+                <Fact
+                  label="Executive summary note"
+                  value={summary.kevFields.executiveSummaryNote || "—"}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
         {summary.vulnerabilityFields ? (
           <Card>
             <CardHeader>

@@ -7,6 +7,7 @@ import {
   KeyRound,
   LayoutDashboard,
   PlugZap,
+  Radar,
   Settings,
   ShieldQuestion,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const NAV = [
   { href: "/dashboard/inbox", label: "Approval Inbox", icon: Inbox },
   { href: "/dashboard/access-accept", label: "Access Accept", icon: KeyRound },
   { href: "/dashboard/vulnerability-acceptance", label: "Vulnerability Accept", icon: Bug },
+  { href: "/dashboard/cisa-kev-review", label: "KEV Exposure Review", icon: Radar },
   { href: "/dashboard/risk-records", label: "Risk Records", icon: ShieldQuestion },
   { href: "/dashboard/product-modules", label: "Product Modules", icon: Boxes },
   { href: "/dashboard/evidence-desk", label: "Evidence Desk", icon: FileSignature },

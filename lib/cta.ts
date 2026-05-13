@@ -14,7 +14,9 @@ export type CtaKey =
   | "access_accept_primary"
   | "access_accept_secondary"
   | "vulnerability_accept_primary"
-  | "vulnerability_accept_secondary";
+  | "vulnerability_accept_secondary"
+  | "kev_exposure_review_primary"
+  | "kev_exposure_review_secondary";
 
 export const CTA_ROUTES: Record<CtaKey, string> = {
   homepage_primary: "/book-risk-review",
@@ -30,6 +32,8 @@ export const CTA_ROUTES: Record<CtaKey, string> = {
   access_accept_secondary: "/dashboard/access-accept/new",
   vulnerability_accept_primary: "/book-risk-review",
   vulnerability_accept_secondary: "/dashboard/vulnerability-acceptance/new",
+  kev_exposure_review_primary: "/book-risk-review",
+  kev_exposure_review_secondary: "/dashboard/cisa-kev-review/new",
 };
 
 export function ctaRouteFor(key: CtaKey, opts?: { module?: ProductModuleKey }): string {

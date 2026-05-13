@@ -49,8 +49,8 @@ export const MODULES: ProductModuleMeta[] = [
     tagline: "CISA KEV-aware exposure reviews with auditable acceptance trails.",
     description:
       "Surface known exploited vulnerabilities mapped to assets, owners, and remediation deadlines — and capture the decision.",
-    acceptLabel: "Accept Risk",
-    rejectLabel: "Reject Risk",
+    acceptLabel: "Accept Exposure",
+    rejectLabel: "Reject Acceptance",
     remediateLabel: "Require Remediation",
   },
   {

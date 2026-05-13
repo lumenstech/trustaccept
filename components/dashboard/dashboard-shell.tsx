@@ -6,6 +6,7 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
+  PlayCircle,
   PlugZap,
   Settings,
   ShieldQuestion,
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/dashboard/risk-records", label: "Risk Records", icon: ShieldQuestion },
   { href: "/dashboard/product-modules", label: "Product Modules", icon: Boxes },
   { href: "/dashboard/evidence-desk", label: "Evidence Desk", icon: FileSignature },
+  { href: "/dashboard/demo/refund-approval", label: "Demo: Refund Approval", icon: PlayCircle },
   { href: "/dashboard/integrations", label: "Integrations", icon: PlugZap },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

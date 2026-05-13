@@ -199,3 +199,81 @@ model Lead {
   status      LeadStatus   @default(NEW)
   createdAt   DateTime     @default(now())
 }
+
+// ----------------------------------------------------------------------------
+// Agent governance (additive). Independent of RiskRecord; no foreign key
+// to existing tables. tenant_id is the same identifier as Organization.id
+// in this codebase, but kept under the new column name for clarity in
+// downstream queries.
+// ----------------------------------------------------------------------------
+
+enum AgentEnvironment {
+  SANDBOX
+  STAGING
+  PRODUCTION
+}
+
+enum AgentRiskTier {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AgentStatus {
+  ACTIVE
+  PAUSED
+  REVOKED
+}
+
+enum AgentDecisionStatus {
+  ALLOWED
+  BLOCKED
+  PENDING_REVIEW
+}
+
+model Agent {
+  id             String           @id @default(cuid())
+  tenantId       String
+  name           String
+  environment    AgentEnvironment
+  riskTier       AgentRiskTier
+  status         AgentStatus      @default(ACTIVE)
+  allowedActions String[]
+  spendCaps      Json
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  revokedAt      DateTime?
+
+  decisions AgentDecision[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+/// Agent-attributable decision events. Distinct from the RiskRecord
+/// `decision` enum; this table stores discrete signed decisions
+/// produced by agents (or by backward-compatible callers with a null
+/// agentId). Append-only by application convention.
+model AgentDecision {
+  id              String              @id @default(cuid())
+  tenantId        String
+  agentId         String?
+  agent           Agent?              @relation(fields: [agentId], references: [id])
+  action          String
+  subject         String
+  amountCents     Int?
+  currency        String?
+  decisionStatus  AgentDecisionStatus
+  policyVersion   String
+  evidencePayload Json
+  evidenceSha256  String
+  receiptJws      String              @db.Text
+  capCheck        Json
+  createdAt       DateTime            @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, agentId, createdAt])
+  @@index([evidenceSha256])
+}

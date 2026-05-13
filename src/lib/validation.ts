@@ -3,6 +3,11 @@ import {
   ACCESS_REQUEST_TYPES,
   IDENTITY_PROVIDERS,
 } from "@/lib/access";
+import {
+  AGENT_ENVIRONMENTS,
+  AGENT_RISK_TIERS,
+} from "@/lib/agents";
+import { DECISION_STATUSES } from "@/lib/decisions";
 import { RISK_AREAS } from "@/lib/leads";
 import { MODULES } from "@/lib/modules";
 import { VULNERABILITY_SOURCES } from "@/lib/vulnerability";
@@ -131,6 +136,91 @@ export const AdminSettingsInput = z.object({
   evidenceRetentionYears: z.number().int().min(1).max(50),
 });
 export type AdminSettingsInputType = z.infer<typeof AdminSettingsInput>;
+
+// ----------------------------------------------------------------------------
+// Agent governance schemas (additive). The existing RiskRecord
+// validators above are unchanged.
+// ----------------------------------------------------------------------------
+
+const ACTION_NAME = z
+  .string()
+  .min(1, "Action is required")
+  .max(120)
+  .regex(/^[a-zA-Z0-9_.:\-/]+$/u, "Invalid characters in action name");
+
+export const SpendCapsInput = z
+  .object({
+    perDecisionCents: z.number().int().nonnegative().max(1_000_000_000).optional(),
+    perDayCents: z.number().int().nonnegative().max(1_000_000_000).optional(),
+    perMonthCents: z.number().int().nonnegative().max(1_000_000_000).optional(),
+    currency: z
+      .string()
+      .min(3)
+      .max(8)
+      .regex(/^[A-Z]+$/u, "Currency must be uppercase ISO code")
+      .default("USD"),
+  })
+  .refine(
+    (caps) =>
+      caps.perDecisionCents !== undefined ||
+      caps.perDayCents !== undefined ||
+      caps.perMonthCents !== undefined ||
+      true,
+    { message: "Spend caps object accepted" },
+  );
+export type SpendCapsInputType = z.infer<typeof SpendCapsInput>;
+
+export const AgentCreateInput = z.object({
+  name: z
+    .string()
+    .min(2, "Agent name is required")
+    .max(120)
+    .regex(/^[A-Za-z0-9 _.\-]+$/u, "Invalid characters in agent name"),
+  environment: z.enum(AGENT_ENVIRONMENTS),
+  riskTier: z.enum(AGENT_RISK_TIERS),
+  allowedActions: z.array(ACTION_NAME).min(1, "At least one allowed action").max(64),
+  spendCaps: SpendCapsInput,
+});
+export type AgentCreateInputType = z.infer<typeof AgentCreateInput>;
+
+export const AgentPatchInput = z.object({
+  name: AgentCreateInput.shape.name.optional(),
+  environment: AgentCreateInput.shape.environment.optional(),
+  riskTier: AgentCreateInput.shape.riskTier.optional(),
+  allowedActions: AgentCreateInput.shape.allowedActions.optional(),
+  spendCaps: SpendCapsInput.optional(),
+});
+export type AgentPatchInputType = z.infer<typeof AgentPatchInput>;
+
+export const DecisionCreateInput = z.object({
+  agentId: z.string().min(1).max(60).optional().nullable(),
+  action: ACTION_NAME,
+  subject: z.string().min(1, "Subject is required").max(500),
+  amountCents: z.number().int().nonnegative().max(1_000_000_000).optional(),
+  currency: z
+    .string()
+    .min(3)
+    .max(8)
+    .regex(/^[A-Z]+$/u, "Currency must be uppercase ISO code")
+    .optional(),
+  decisionStatus: z.enum(DECISION_STATUSES).optional(),
+  policyVersion: z.string().min(1).max(60).default("v1"),
+  block: z.boolean().optional(),
+  evidencePayload: z.record(z.string(), z.unknown()).default({}),
+});
+export type DecisionCreateInputType = z.infer<typeof DecisionCreateInput>;
+
+const exportDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/u, "Expected YYYY-MM-DD");
+
+export const EvidenceExportInput = z.object({
+  from: exportDate,
+  to: exportDate,
+  agentId: z.string().min(1).max(60).optional(),
+  format: z.enum(["json", "csv", "zip"]).default("json"),
+});
+export type EvidenceExportInputType = z.infer<typeof EvidenceExportInput>;
 
 export function formatZodError(error: z.ZodError) {
   return {

@@ -3,6 +3,8 @@ import {
   DEMO_USER_ID,
   SEED_RECORDS,
 } from "@/lib/seed-data";
+import type { Agent } from "@/lib/agents";
+import type { DecisionEvent } from "@/lib/decisions";
 import type {
   AuditLog,
   Lead,
@@ -26,6 +28,8 @@ export interface Store {
   auditLogs: AuditLog[];
   leads: Map<string, Lead>;
   evidencePackets: Map<string, EvidencePacketRecord>;
+  agents: Map<string, Agent>;
+  agentDecisions: DecisionEvent[];
 }
 
 function seedStore(): Store {
@@ -69,6 +73,8 @@ function seedStore(): Store {
     auditLogs,
     leads: new Map(),
     evidencePackets: new Map(),
+    agents: new Map(),
+    agentDecisions: [],
   };
 }
 

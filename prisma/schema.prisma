@@ -78,10 +78,15 @@ model Organization {
   name      String
   createdAt DateTime @default(now())
 
-  users          User[]
-  riskRecords    RiskRecord[]
-  auditLogs      AuditLog[]
+  users           User[]
+  riskRecords     RiskRecord[]
+  auditLogs       AuditLog[]
   evidencePackets EvidencePacket[]
+  apiKeys             ApiKey[]
+  webhookEndpoints    WebhookEndpoint[]
+  // Singular + optional: SlackInstallation.organizationId is @unique
+  // (one install per org). Do NOT change to a list.
+  slackInstallation   SlackInstallation?
 }
 
 model User {
@@ -136,6 +141,7 @@ model RiskRecord {
 
   frameworkTags         String[]
   sourceReferences      Json
+  metadata              Json           @default("{}")
 
   createdById           String?
   createdBy             User?          @relation("RecordCreatedBy", fields: [createdById], references: [id])
@@ -182,6 +188,19 @@ model EvidencePacket {
   summary        Json
   generatedAt    DateTime     @default(now())
 
+  // Phase 2 / EvidenceDesk receipt fields.
+  // SHA-256 of canonicalized receipt body (excluding receiptHash + signature).
+  receiptHash    String?
+  // HMAC-SHA256(receiptHash, TRUSTACCEPT_RECEIPT_SIGNING_SECRET).
+  signature      String?
+  receiptVersion Int          @default(1)
+  // "decision_request_created" | "decision_recorded" | "manual_export"
+  trigger        String?
+  exportedAt     DateTime?
+  // Immutable snapshot of the RiskRecord at receipt time, so the receipt
+  // stays verifiable independent of subsequent record mutations.
+  recordSnapshot Json?
+
   @@index([organizationId])
   @@index([riskRecordId])
 }
@@ -198,4 +217,114 @@ model Lead {
   description String       @db.Text
   status      LeadStatus   @default(NEW)
   createdAt   DateTime     @default(now())
+}
+
+// Phase 2 — Agent Action Receipts API + Slack Approval App.
+// All six models are additive; nothing else in this schema depends on them.
+
+model ApiKey {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  // First 12 chars of the full key, safe to display in the dashboard.
+  prefix         String
+  // scrypt(fullKey + TRUSTACCEPT_API_KEY_PEPPER). The full key is shown
+  // exactly once at creation and never persisted in plaintext.
+  keyHash        String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([prefix])
+}
+
+model WebhookEndpoint {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  url            String
+  // Generated once at creation, shown once, then masked.
+  signingSecret  String
+  enabled        Boolean           @default(true)
+  description    String?
+  createdAt      DateTime          @default(now())
+
+  deliveries     WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id                String          @id @default(cuid())
+  webhookEndpointId String
+  webhookEndpoint   WebhookEndpoint @relation(fields: [webhookEndpointId], references: [id], onDelete: Cascade)
+  // Nullable: receipt.created events reference a receipt, not a record.
+  // Do NOT tighten this to a non-null relation.
+  riskRecordId      String?
+  // "decision.created" | "decision.accepted" | "decision.rejected"
+  //   | "decision.remediation_required" | "receipt.created"
+  eventType         String
+  payload           Json
+  // HMAC-SHA256 of the canonicalized payload with the endpoint signingSecret.
+  signature         String
+  // "pending" | "delivered" | "failed"
+  status            String
+  responseCode      Int?
+  responseBody      String?
+  attemptCount      Int             @default(0)
+  lastAttemptAt     DateTime?
+  createdAt         DateTime        @default(now())
+
+  @@index([webhookEndpointId])
+  @@index([riskRecordId])
+}
+
+model SlackInstallation {
+  id               String       @id @default(cuid())
+  // @unique enforces one installation per organization.
+  organizationId   String       @unique
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  teamId           String
+  teamName         String?
+  botUserId        String?
+  // Encrypted at rest in production.
+  botAccessToken   String
+  defaultChannelId String?
+  installedById    String?
+  installedByName  String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model SlackApprovalMessage {
+  id             String   @id @default(cuid())
+  organizationId String
+  riskRecordId   String
+  teamId         String
+  channelId      String
+  // Slack's message timestamp, used to update the card via chat.update.
+  messageTs      String
+  // "sent" | "decided" | "expired"
+  status         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([riskRecordId])
+}
+
+model IdempotencyKey {
+  // Composite key format: "{orgId}:{endpoint}:{userKey}"
+  // Endpoint is included so the same Idempotency-Key from a client maps to
+  // different cache entries across different POST routes. This matches the
+  // checkIdempotencyKey signature in §3.3 of TRUSTACCEPT_PHASE2_PLAN.md.
+  key            String   @id
+  organizationId String
+  endpoint       String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
 }

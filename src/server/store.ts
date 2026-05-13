@@ -17,6 +17,104 @@ export interface EvidencePacketRecord {
   riskRecordId: string;
   summary: unknown;
   generatedAt: string;
+  // Phase 2 / EvidenceDesk receipt fields. All optional so the existing
+  // PDF-export callsite (createEvidencePacket -> createReceipt wrapper)
+  // continues to compile and round-trip without setting them yet.
+  receiptHash?: string;
+  signature?: string;
+  receiptVersion?: number;
+  trigger?: "decision_request_created" | "decision_recorded" | "manual_export";
+  exportedAt?: string;
+  recordSnapshot?: RiskRecord;
+  webhookDeliveryRefs?: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 / Agent Action Receipts API + Slack Approval App
+// ---------------------------------------------------------------------------
+
+export interface ApiKeyRecord {
+  id: string;
+  organizationId: string;
+  name: string;
+  prefix: string;
+  keyHash: string;
+  lastUsedAt?: string;
+  revokedAt?: string;
+  createdAt: string;
+}
+
+export interface WebhookEndpointRecord {
+  id: string;
+  organizationId: string;
+  url: string;
+  signingSecret: string;
+  enabled: boolean;
+  description?: string;
+  createdAt: string;
+}
+
+export type WebhookEventType =
+  | "decision.created"
+  | "decision.accepted"
+  | "decision.rejected"
+  | "decision.remediation_required"
+  | "receipt.created";
+
+export type WebhookDeliveryStatus = "pending" | "delivered" | "failed";
+
+export interface WebhookDeliveryRecord {
+  id: string;
+  webhookEndpointId: string;
+  // Nullable: receipt.created events reference a receipt, not a record.
+  riskRecordId: string | null;
+  eventType: WebhookEventType;
+  payload: unknown;
+  signature: string;
+  status: WebhookDeliveryStatus;
+  responseCode?: number;
+  responseBody?: string;
+  attemptCount: number;
+  lastAttemptAt?: string;
+  createdAt: string;
+}
+
+export interface SlackInstallationRecord {
+  id: string;
+  organizationId: string;
+  teamId: string;
+  teamName?: string;
+  botUserId?: string;
+  botAccessToken: string;
+  defaultChannelId?: string;
+  installedById?: string;
+  installedByName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SlackApprovalMessageStatus = "sent" | "decided" | "expired";
+
+export interface SlackApprovalMessageRecord {
+  id: string;
+  organizationId: string;
+  riskRecordId: string;
+  teamId: string;
+  channelId: string;
+  messageTs: string;
+  status: SlackApprovalMessageStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IdempotencyKeyRecord {
+  // Composite key: "{orgId}:{endpoint}:{userKey}".
+  key: string;
+  organizationId: string;
+  endpoint: string;
+  responseStatus: number;
+  responseBody: unknown;
+  createdAt: string;
 }
 
 export interface Store {
@@ -26,6 +124,14 @@ export interface Store {
   auditLogs: AuditLog[];
   leads: Map<string, Lead>;
   evidencePackets: Map<string, EvidencePacketRecord>;
+  // Phase 2 collections.
+  apiKeys: Map<string, ApiKeyRecord>;
+  webhookEndpoints: Map<string, WebhookEndpointRecord>;
+  webhookDeliveries: WebhookDeliveryRecord[];
+  // Keyed by organizationId — one install per org (matches @unique constraint).
+  slackInstallations: Map<string, SlackInstallationRecord>;
+  slackApprovalMessages: Map<string, SlackApprovalMessageRecord>;
+  idempotencyKeys: Map<string, IdempotencyKeyRecord>;
 }
 
 function seedStore(): Store {
@@ -69,6 +175,12 @@ function seedStore(): Store {
     auditLogs,
     leads: new Map(),
     evidencePackets: new Map(),
+    apiKeys: new Map(),
+    webhookEndpoints: new Map(),
+    webhookDeliveries: [],
+    slackInstallations: new Map(),
+    slackApprovalMessages: new Map(),
+    idempotencyKeys: new Map(),
   };
 }
 

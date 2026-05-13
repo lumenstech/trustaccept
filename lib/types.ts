@@ -61,6 +61,7 @@ export interface RiskRecord {
   auditTimeline: AuditTimelineEntry[];
   accessContext?: import("./access").AccessContext;
   vulnerabilityContext?: import("./vulnerability").VulnerabilityContext;
+  metadata?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;
   createdById?: string;

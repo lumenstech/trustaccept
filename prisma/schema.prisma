@@ -199,3 +199,70 @@ model Lead {
   status      LeadStatus   @default(NEW)
   createdAt   DateTime     @default(now())
 }
+
+enum AgentEnvironment {
+  DEV
+  STAGING
+  PROD
+}
+
+enum AgentRiskTier {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AgentStatus {
+  ACTIVE
+  PAUSED
+  REVOKED
+}
+
+/// Registry of AI agents that can take actions on behalf of a tenant.
+/// Decisions taken by or on behalf of an agent link back here via Decision.agentId.
+model Agent {
+  id              String            @id @default(uuid()) @db.Uuid
+  tenantId        String
+  name            String
+  ownerEmail      String
+  department      String?
+  environment    AgentEnvironment
+  riskTier        AgentRiskTier
+  allowedActions  Json              @default("[]")
+  spendCaps       Json              @default("{}")
+  status          AgentStatus       @default(ACTIVE)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  decisions       Decision[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, status])
+  @@index([tenantId, environment])
+  @@index([tenantId, riskTier])
+}
+
+/// Agent-driven (or agent-attributable) decision events. Append-only by
+/// application convention. Separate from RiskRecord.decision which captures
+/// the human approval decision on a risk-acceptance record; the two coexist.
+model Decision {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String
+  action         String
+  decision       String
+  amount         Decimal? @db.Decimal(18, 4)
+  approverId     String?
+  requestBody    Json?
+  context        Json     @default("{}")
+  policyVersion  String   @default("v0")
+  agentId        String?  @db.Uuid
+  agent          Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  evidenceHash   String?
+  signedReceipt  String?
+  createdAt      DateTime @default(now())
+
+  @@index([agentId])
+  @@index([createdAt(sort: Desc)])
+  @@index([tenantId, createdAt])
+}

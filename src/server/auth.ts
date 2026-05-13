@@ -60,6 +60,30 @@ export function requireDecisionAccess(): SessionUser {
   return user;
 }
 
+const ADMIN_WRITE_ROLES = new Set<SessionUser["role"]>(["OWNER", "ADMIN"]);
+
+/**
+ * Admin-only write gate for the agent registry. Members (any dashboard
+ * role) can read; only OWNER/ADMIN can create, update, pause, or revoke.
+ */
+export function requireAdminAccess(): SessionUser {
+  const user = requireDashboardAccess();
+  if (!ADMIN_WRITE_ROLES.has(user.role)) {
+    throw new ForbiddenError("Admin role required");
+  }
+  return user;
+}
+
+/**
+ * Test-only: override the demo session with an arbitrary user. The
+ * session lookup goes through the users map keyed by DEMO_USER_ID,
+ * so we install a different SessionUser at that slot. Pair with
+ * __resetStoreForTests() to revert.
+ */
+export function __setDemoUserForTests(user: SessionUser): void {
+  getStore().users.set(DEMO_USER_ID, user);
+}
+
 export interface OrganizationScoped {
   organizationId?: string;
 }

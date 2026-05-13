@@ -132,6 +132,77 @@ export const AdminSettingsInput = z.object({
 });
 export type AdminSettingsInputType = z.infer<typeof AdminSettingsInput>;
 
+const positiveAmount = z.number().nonnegative().max(1_000_000_000);
+
+export const AgentSpendCapsSchema = z
+  .object({
+    daily_usd: positiveAmount.optional(),
+    weekly_usd: positiveAmount.optional(),
+    monthly_usd: positiveAmount.optional(),
+    per_txn_usd: positiveAmount.optional(),
+  })
+  .strict();
+export type AgentSpendCapsType = z.infer<typeof AgentSpendCapsSchema>;
+
+export const AgentCreateInput = z
+  .object({
+    name: z.string().min(1, "Name is required").max(120),
+    owner_email: z.string().email("Valid owner_email required").max(200),
+    department: z.string().min(1).max(120).optional(),
+    environment: z.enum(["dev", "staging", "prod"]),
+    risk_tier: z.enum(["low", "medium", "high", "critical"]),
+    allowed_actions: z.array(z.string().min(1).max(120)).max(200).default([]),
+    spend_caps: AgentSpendCapsSchema.default({}),
+  })
+  .strict();
+export type AgentCreateInputType = z.infer<typeof AgentCreateInput>;
+
+export const AgentUpdateInput = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    owner_email: z.string().email().max(200).optional(),
+    department: z.string().min(1).max(120).optional(),
+    environment: z.enum(["dev", "staging", "prod"]).optional(),
+    risk_tier: z.enum(["low", "medium", "high", "critical"]).optional(),
+    allowed_actions: z.array(z.string().min(1).max(120)).max(200).optional(),
+    spend_caps: AgentSpendCapsSchema.optional(),
+  })
+  .strict();
+export type AgentUpdateInputType = z.infer<typeof AgentUpdateInput>;
+
+export const AgentListQuery = z
+  .object({
+    status: z.enum(["active", "paused", "revoked"]).optional(),
+    environment: z.enum(["dev", "staging", "prod"]).optional(),
+    risk_tier: z.enum(["low", "medium", "high", "critical"]).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    page_size: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+export type AgentListQueryType = z.infer<typeof AgentListQuery>;
+
+export const V1DecisionCreateInput = z
+  .object({
+    action: z.string().min(1).max(200),
+    decision: z.enum(["accept", "reject", "remediate"]),
+    agent_id: z.string().uuid().optional(),
+    amount: positiveAmount.optional(),
+    approver_id: z.string().min(1).max(120).optional(),
+    request_body: z.unknown().optional(),
+  })
+  .strict();
+export type V1DecisionCreateInputType = z.infer<typeof V1DecisionCreateInput>;
+
+export const DecisionsExportQuery = z
+  .object({
+    from: z.string().datetime({ offset: true }).or(z.string().datetime()),
+    to: z.string().datetime({ offset: true }).or(z.string().datetime()),
+    format: z.enum(["json", "csv", "zip"]).default("json"),
+    agent_id: z.string().uuid().optional(),
+  })
+  .strict();
+export type DecisionsExportQueryType = z.infer<typeof DecisionsExportQuery>;
+
 export function formatZodError(error: z.ZodError) {
   return {
     error: "validation_failed",

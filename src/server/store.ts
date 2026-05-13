@@ -4,7 +4,9 @@ import {
   SEED_RECORDS,
 } from "@/lib/seed-data";
 import type {
+  Agent,
   AuditLog,
+  DecisionRecord,
   Lead,
   Organization,
   RiskRecord,
@@ -26,6 +28,8 @@ export interface Store {
   auditLogs: AuditLog[];
   leads: Map<string, Lead>;
   evidencePackets: Map<string, EvidencePacketRecord>;
+  agents: Map<string, Agent>;
+  decisions: Map<string, DecisionRecord>;
 }
 
 function seedStore(): Store {
@@ -69,6 +73,8 @@ function seedStore(): Store {
     auditLogs,
     leads: new Map(),
     evidencePackets: new Map(),
+    agents: new Map(),
+    decisions: new Map(),
   };
 }
 

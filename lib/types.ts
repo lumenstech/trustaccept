@@ -128,6 +128,55 @@ export interface Lead {
   createdAt: string;
 }
 
+export type AgentEnvironment = "dev" | "staging" | "prod";
+export type AgentRiskTier = "low" | "medium" | "high" | "critical";
+export type AgentStatus = "active" | "paused" | "revoked";
+
+export interface AgentSpendCaps {
+  daily_usd?: number;
+  weekly_usd?: number;
+  monthly_usd?: number;
+  per_txn_usd?: number;
+}
+
+export interface Agent {
+  id: string;
+  tenantId: string;
+  name: string;
+  ownerEmail: string;
+  department?: string;
+  environment: AgentEnvironment;
+  riskTier: AgentRiskTier;
+  allowedActions: string[];
+  spendCaps: AgentSpendCaps;
+  status: AgentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DecisionCapCheck {
+  daily_used: number;
+  weekly_used: number;
+  monthly_used: number;
+  exceeded: boolean;
+}
+
+export interface DecisionRecord {
+  id: string;
+  tenantId: string;
+  action: string;
+  decision: Decision;
+  amount?: number;
+  approverId?: string;
+  requestBody?: unknown;
+  context: Record<string, unknown> & { cap_check?: DecisionCapCheck };
+  policyVersion: string;
+  agentId?: string;
+  evidenceHash?: string;
+  signedReceipt?: string;
+  createdAt: string;
+}
+
 export interface ProductModuleMeta {
   key: ProductModuleKey;
   name: string;

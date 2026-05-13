@@ -7,13 +7,13 @@ import {
   Clock,
   FileCheck2,
   Shield,
-  ShieldCheck,
   User2,
 } from "lucide-react";
-import { Badge, RiskLevelBadge, StatusBadge } from "@/components/ui/badge";
+import { Badge, RiskLevelBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/site/logo";
+import { DecisionActions } from "@/components/risk/decision-actions";
 import { getModule } from "@/lib/modules";
 import { findRecord } from "@/lib/seed-data";
 
@@ -46,7 +46,6 @@ export default function ApprovePage({ params }: { params: { id: string } }) {
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="info">{module.name}</Badge>
                 <RiskLevelBadge level={record.riskLevel} />
-                <StatusBadge status={record.status} />
                 <span className="ml-auto font-mono text-xs text-muted-foreground">
                   Decision ID · {record.id}
                 </span>
@@ -57,27 +56,7 @@ export default function ApprovePage({ params }: { params: { id: string } }) {
               <p className="mt-3 text-base text-muted-foreground">{record.description}</p>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Decision</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Module-aware actions. Every decision is signed, time-stamped, and
-                  appended to the audit timeline.
-                </p>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-3">
-                <Button variant="accept" size="lg">
-                  <ShieldCheck className="h-4 w-4" />
-                  {module.acceptLabel}
-                </Button>
-                <Button variant="reject" size="lg">
-                  {module.rejectLabel}
-                </Button>
-                <Button variant="remediate" size="lg">
-                  {module.remediateLabel}
-                </Button>
-              </CardContent>
-            </Card>
+            <DecisionActions initialRecord={record} />
 
             <SectionCard title="Compensating controls" body={record.compensatingControls} />
             <SectionCard title="Evidence summary" body={record.evidenceSummary} />
@@ -103,31 +82,6 @@ export default function ApprovePage({ params }: { params: { id: string } }) {
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Audit timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="relative space-y-4 border-l border-border pl-6">
-                  {record.auditTimeline.map((entry, idx) => (
-                    <li key={idx}>
-                      <span className="absolute -left-[6px] mt-1 h-3 w-3 rounded-full bg-primary" />
-                      <p className="text-sm font-medium">
-                        {entry.actor}{" "}
-                        <span className="font-normal text-muted-foreground">
-                          {entry.action}
-                        </span>
-                      </p>
-                      <p className="text-sm text-muted-foreground">{entry.detail}</p>
-                      <p className="mt-1 font-mono text-xs text-muted-foreground">
-                        {entry.occurredAt}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
               </CardContent>
             </Card>
           </div>
@@ -174,9 +128,16 @@ export default function ApprovePage({ params }: { params: { id: string } }) {
               <CardHeader>
                 <CardTitle>Approval delivery</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                This hosted page is delivered to your named approver via SequenceNow.
-                Once a decision is captured, the record flows to the Evidence Desk.
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  This hosted page is delivered to your named approver via SequenceNow.
+                  Once a decision is captured, the record flows to the Evidence Desk.
+                </p>
+                <Link href={`/dashboard/risk-records/${record.id}/evidence`}>
+                  <Button variant="outline" className="w-full">
+                    Open evidence packet
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </aside>

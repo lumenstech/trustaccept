@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InboxCard } from "@/components/risk/inbox-card";
 import { Section, SectionHeader } from "@/components/ui/section";
+import { ctaRouteFor } from "@/lib/cta";
 import { MODULES } from "@/lib/modules";
 import { SEED_RECORDS } from "@/lib/seed-data";
 
@@ -54,6 +55,7 @@ const PRICING = [
     description:
       "We produce a single defensible risk acceptance record on your behalf, including evidence packet.",
     cta: "Order a Risk Record",
+    href: ctaRouteFor("risk_record"),
   },
   {
     name: "48-Hour Risk Acceptance Pack",
@@ -63,6 +65,7 @@ const PRICING = [
       "Featured. Three risk records, framework-informed compensating controls, and an executive-ready summary delivered in 48 hours.",
     cta: "Book the 48-Hour Pack",
     featured: true,
+    href: ctaRouteFor("pack_48hour"),
   },
   {
     name: "TrustAccept Pilot",
@@ -71,6 +74,7 @@ const PRICING = [
     description:
       "Stand up TrustAccept in your environment for one product module. Workflow design, integration mapping, and approver onboarding.",
     cta: "Scope a pilot",
+    href: ctaRouteFor("pilot"),
   },
   {
     name: "Managed Evidence Desk",
@@ -79,6 +83,7 @@ const PRICING = [
     description:
       "We run your Evidence Desk for you: review queue, expirations, monthly executive register, audit-ready exports.",
     cta: "Talk to evidence team",
+    href: ctaRouteFor("managed_evidence_desk"),
   },
   {
     name: "Secure Release Program",
@@ -87,6 +92,7 @@ const PRICING = [
     description:
       "Dedicated Secure Release Gate program with on-call approver coverage and release-by-release evidence packets.",
     cta: "Start a release program",
+    href: ctaRouteFor("secure_release_program"),
   },
 ];
 
@@ -128,13 +134,13 @@ function HeroSection() {
           software releases, and device access.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/pricing">
+          <Link href={ctaRouteFor("homepage_primary")}>
             <Button size="lg">
               Book a 48-Hour Risk Acceptance Review
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/docs">
+          <Link href={ctaRouteFor("homepage_secondary")}>
             <Button variant="outline" size="lg">
               View API Demo
             </Button>
@@ -284,7 +290,7 @@ function RiskPackSection() {
             </li>
           </ul>
           <div className="mt-8">
-            <Link href="/pricing">
+            <Link href={ctaRouteFor("pack_48hour")}>
               <Button size="lg">
                 Book the 48-Hour Pack <ArrowRight className="h-4 w-4" />
               </Button>
@@ -493,7 +499,7 @@ function PricingSection() {
             <CardContent className="text-sm text-muted-foreground">
               {plan.description}
               <div className="mt-6">
-                <Link href="/pricing">
+                <Link href={plan.href}>
                   <Button variant={plan.featured ? "primary" : "outline"} className="w-full">
                     {plan.cta}
                   </Button>
@@ -560,12 +566,12 @@ function FinalCtaSection() {
           business days.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/pricing">
+          <Link href={ctaRouteFor("homepage_primary")}>
             <Button size="lg">
               Book a 48-Hour Risk Acceptance Review <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/docs">
+          <Link href={ctaRouteFor("homepage_secondary")}>
             <Button variant="outline" size="lg">
               View API Demo
             </Button>

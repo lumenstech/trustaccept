@@ -36,7 +36,7 @@ export function SiteHeader() {
               Open dashboard
             </Button>
           </Link>
-          <Link href="/pricing">
+          <Link href="/book-risk-review">
             <Button size="sm">Book a 48-Hour Review</Button>
           </Link>
         </div>

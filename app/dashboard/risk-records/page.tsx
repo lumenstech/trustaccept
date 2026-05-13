@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RiskLevelBadge, StatusBadge, Badge } from "@/components/ui/badge";
 import { SEED_RECORDS } from "@/lib/seed-data";
@@ -12,6 +14,14 @@ export default function RiskRecordsPage() {
         eyebrow="Risk Records"
         title="All risk records"
         description="A flat table of every risk record across all modules. Each row links to its hosted approval page."
+        actions={
+          <Link href="/dashboard/risk-records/new">
+            <Button>
+              <Plus className="h-4 w-4" />
+              New risk record
+            </Button>
+          </Link>
+        }
       />
       <div className="px-8 py-8">
         <Card>

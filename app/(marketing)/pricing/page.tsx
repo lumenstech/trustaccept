@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Section, SectionHeader } from "@/components/ui/section";
+import { ctaRouteFor } from "@/lib/cta";
 
 const PLANS = [
   {
@@ -19,6 +20,7 @@ const PLANS = [
       "Audit-ready evidence packet",
     ],
     cta: "Order a Risk Record",
+    href: ctaRouteFor("risk_record"),
   },
   {
     name: "48-Hour Risk Acceptance Pack",
@@ -34,6 +36,7 @@ const PLANS = [
       "Hand-off to your audit and risk leads",
     ],
     cta: "Book the 48-Hour Pack",
+    href: ctaRouteFor("pack_48hour"),
   },
   {
     name: "TrustAccept Pilot",
@@ -48,6 +51,7 @@ const PLANS = [
       "SequenceNow delivery configuration",
     ],
     cta: "Scope a pilot",
+    href: ctaRouteFor("pilot"),
   },
   {
     name: "Managed Evidence Desk",
@@ -62,6 +66,7 @@ const PLANS = [
       "Owner follow-up on lapsing decisions",
     ],
     cta: "Talk to evidence team",
+    href: ctaRouteFor("managed_evidence_desk"),
   },
   {
     name: "Secure Release Program",
@@ -76,6 +81,7 @@ const PLANS = [
       "Quarterly change-management review",
     ],
     cta: "Start a release program",
+    href: ctaRouteFor("secure_release_program"),
   },
 ];
 
@@ -123,7 +129,7 @@ export default function Page() {
                   ))}
                 </ul>
                 <div className="mt-6">
-                  <Link href="/dashboard">
+                  <Link href={plan.href}>
                     <Button
                       variant={plan.featured ? "primary" : "outline"}
                       className="w-full"

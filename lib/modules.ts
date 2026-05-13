@@ -88,9 +88,9 @@ export const MODULES: ProductModuleMeta[] = [
     tagline: "One evidence-ready system of record for every risk decision.",
     description:
       "Audit-ready packets for every accepted, rejected, and remediated risk — exportable for executive risk registers and auditors.",
-    acceptLabel: "Accept Risk",
-    rejectLabel: "Reject Risk",
-    remediateLabel: "Require Remediation",
+    acceptLabel: "Mark Reviewed",
+    rejectLabel: "Request Update",
+    remediateLabel: "Export Evidence",
   },
 ];
 

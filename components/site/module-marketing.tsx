@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InboxCard } from "@/components/risk/inbox-card";
 import { Section, SectionHeader } from "@/components/ui/section";
+import { ctaRouteFor } from "@/lib/cta";
 import { getModule } from "@/lib/modules";
 import { SEED_RECORDS } from "@/lib/seed-data";
 import type { ProductModuleKey } from "@/lib/types";
@@ -39,14 +40,19 @@ export function ModuleMarketing({
           </h1>
           <p className="max-w-3xl text-lg text-muted-foreground">{heroSubheadline}</p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/pricing">
+            <Link href={ctaRouteFor("product_primary")}>
               <Button size="lg">
                 Book a 48-Hour Risk Acceptance Review <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
+            <Link href={ctaRouteFor("product_secondary", { module: moduleKey })}>
+              <Button variant="outline" size="lg">
+                Start a risk record for {module.shortName}
+              </Button>
+            </Link>
             {record ? (
               <Link href={`/approve/${record.id}`}>
-                <Button variant="outline" size="lg">
+                <Button variant="ghost" size="lg">
                   See a live decision
                 </Button>
               </Link>
@@ -116,11 +122,11 @@ export function ModuleMarketing({
             powered by SequenceNow.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/pricing">
+            <Link href={ctaRouteFor("pack_48hour")}>
               <Button>Book the 48-Hour Pack</Button>
             </Link>
-            <Link href="/dashboard/inbox">
-              <Button variant="outline">Open Approval Inbox</Button>
+            <Link href={ctaRouteFor("product_secondary", { module: moduleKey })}>
+              <Button variant="outline">Start a {module.shortName} record</Button>
             </Link>
           </div>
         </div>

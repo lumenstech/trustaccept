@@ -24,11 +24,12 @@ const COLS = [
     ],
   },
   {
-    title: "Workspace",
+    title: "Talk to us",
     links: [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/dashboard/inbox", label: "Approval Inbox" },
-      { href: "/dashboard/evidence-desk", label: "Evidence Desk" },
+      { href: "/book-risk-review", label: "Book 48-Hour Review" },
+      { href: "/start-pilot", label: "Start a pilot" },
+      { href: "/request-evidence-desk", label: "Managed Evidence Desk" },
+      { href: "/contact", label: "Contact" },
     ],
   },
 ];

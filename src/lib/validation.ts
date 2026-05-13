@@ -1,9 +1,33 @@
 import { z } from "zod";
+import {
+  ACCESS_REQUEST_TYPES,
+  IDENTITY_PROVIDERS,
+} from "@/lib/access";
 import { RISK_AREAS } from "@/lib/leads";
 import { MODULES } from "@/lib/modules";
 
 const moduleKeys = MODULES.map((m) => m.key) as [string, ...string[]];
 const riskAreaValues = RISK_AREAS.map((r) => r.value) as [string, ...string[]];
+const accessRequestTypeValues = ACCESS_REQUEST_TYPES.map((r) => r.value) as [
+  string,
+  ...string[],
+];
+const identityProviderValues = IDENTITY_PROVIDERS.map((p) => p.value) as [
+  string,
+  ...string[],
+];
+
+export const AccessContextInput = z.object({
+  requestType: z.enum(accessRequestTypeValues),
+  requester: z.string().min(1).max(200),
+  identityProvider: z.enum(identityProviderValues),
+  userOrServiceAccount: z.string().min(1).max(200),
+  targetSystem: z.string().min(1).max(200),
+  privilegeLevel: z.string().min(1).max(120),
+  requestedDuration: z.string().max(80).optional(),
+  approvalOwner: z.string().max(160).optional(),
+});
+export type AccessContextInputType = z.infer<typeof AccessContextInput>;
 
 const sourceReferenceSchema = z.object({
   label: z.string().min(1).max(200),
@@ -37,6 +61,7 @@ export const RiskRecordCreateInput = z.object({
   technicalContext: z.string().max(4000).default(""),
   frameworkTags: z.array(z.string().min(1).max(120)).max(20).default([]),
   sourceReferences: z.array(sourceReferenceSchema).max(20).default([]),
+  accessContext: AccessContextInput.optional(),
 });
 export type RiskRecordCreateInputType = z.infer<typeof RiskRecordCreateInput>;
 

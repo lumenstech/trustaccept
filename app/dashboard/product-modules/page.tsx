@@ -50,7 +50,7 @@ export default function ProductModulesPage() {
                     {module.remediateLabel}
                   </span>
                 </div>
-                <div className="mt-6 flex items-center gap-3">
+                <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Link
                     href={module.marketingRoute}
                     className="inline-flex items-center gap-1 text-sm text-primary"
@@ -63,6 +63,14 @@ export default function ProductModulesPage() {
                   >
                     Inbox <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
+                  {module.key === "access-accept" ? (
+                    <Link
+                      href="/dashboard/access-accept"
+                      className="inline-flex items-center gap-1 text-sm text-primary"
+                    >
+                      Command center <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>

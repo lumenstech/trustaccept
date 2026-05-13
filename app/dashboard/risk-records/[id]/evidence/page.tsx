@@ -79,6 +79,37 @@ export default function EvidencePacketPage({ params }: { params: { id: string } 
           </CardContent>
         </Card>
 
+        {summary.accessFields ? (
+          <Card>
+            <CardHeader>
+              <Badge tone="info">Access Accept</Badge>
+              <CardTitle className="mt-2">Identity & access context</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                <Fact label="Request type" value={summary.accessFields.requestType} />
+                <Fact label="Requester" value={summary.accessFields.requester} />
+                <Fact
+                  label="Identity provider"
+                  value={summary.accessFields.identityProvider}
+                />
+                <Fact
+                  label="User or service account"
+                  value={summary.accessFields.userOrServiceAccount}
+                />
+                <Fact label="Target system" value={summary.accessFields.targetSystem} />
+                <Fact label="Privilege level" value={summary.accessFields.privilegeLevel} />
+                <Fact
+                  label="Requested duration"
+                  value={summary.accessFields.requestedDuration}
+                />
+                <Fact label="Approval owner" value={summary.accessFields.approvalOwner} />
+                <Fact label="Review date" value={summary.reviewDate} />
+              </dl>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="grid gap-6 lg:grid-cols-2">
           <PacketCard title="Compensating controls" body={record.compensatingControls} />
           <PacketCard title="Business justification" body={record.businessJustification} />

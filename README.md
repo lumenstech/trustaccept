@@ -33,6 +33,61 @@ support powered by SequenceNow.
 - Seed data for all seven modules
 - Mock authentication (production auth is delivered via SequenceNow)
 
+## Access Accept (first deep module)
+
+Access Accept is the first TrustAccept module built out as a deep, end-to-end
+product surface. It creates evidence-ready approval records for privileged
+access, admin escalation, API key creation, MFA recovery, break-glass access,
+suspicious login events, admin consent, and temporary contractor access.
+
+TrustAccept does not replace Auth0, Okta, Microsoft Entra, Duo, GitHub, Jira, or
+ServiceNow. TrustAccept creates the approval, acceptance, and evidence layer
+around the high-risk identity and access decisions those systems expose.
+
+### Routes
+
+- `/access-accept` — enhanced marketing page (problem statement, identity-provider clarification, example decision cards, workflow timeline, evidence packet preview, source-system cards, primary + secondary CTAs).
+- `/dashboard/access-accept` — Access Accept command center. Summary cards for pending approvals, critical events, expiring temporary access, MFA recovery, API key, suspicious login, break-glass, and contractor access. Empty state and table of every Access Accept record. Buttons: **New Access Record** and **View Identity Events**.
+- `/dashboard/access-accept/new` — Access Accept-specific intake form (request type, requester, identity provider, user/service account, target system, privilege level, business justification, requested duration, expiration, review date, compensating controls, approval owner, evidence summary). POSTs to `/api/risk-records` with `module = access-accept` and an `accessContext` payload, then offers links to the command center, hosted approval page, evidence packet, and 48-Hour Review.
+- `/dashboard/access-accept/events` — mock identity event feed. Each event has a **Create Risk Record** button that links to `/dashboard/access-accept/new` with the request type, identity source, user, risk level, target system, and event id prefilled via query params.
+
+### Module-aware decision labels
+
+| Access Accept record type | Accept | Reject | Remediate |
+| --- | --- | --- | --- |
+| Default Access Accept | Approve Access | Reject Access | Require More Evidence |
+| Suspicious login record | Accept Login Risk | Reject / Block | Escalate Login |
+
+Resolved through `getApprovalLabels(record)` in `lib/access.ts`. The inbox card,
+hosted approval page, and Access Accept dashboard all use the same helper so
+the labels stay consistent across surfaces.
+
+### Demo workflow
+
+```
+1. Identity event detected by Okta / Auth0 / Microsoft Entra / Duo / GitHub
+2. TrustAccept creates an Access Accept risk record
+3. Approver approves or rejects access via the hosted approval page
+4. Evidence record created in the Evidence Desk
+5. Callback or ticket update sent to the source identity / ITSM system
+```
+
+The shape of an inbound identity event is documented at `/docs` and returned
+by `/api/demo/risk-flow`:
+
+```json
+{
+  "source": "okta",
+  "event_type": "break_glass_access_request",
+  "requester": "admin@company.com",
+  "target_system": "production tenant",
+  "privilege_level": "super_admin",
+  "duration": "4 hours",
+  "risk_level": "critical",
+  "business_justification": "Production incident response"
+}
+```
+
 ## Hardening status
 
 | Concern | Status | Notes |
@@ -138,6 +193,16 @@ npm run test               # vitest run
 npm run build              # next build
 ```
 
+### Verification commands
+
+```bash
+npm install
+npm run db:generate     # npx prisma generate
+npm run typecheck       # tsc --noEmit
+npm run test            # vitest run
+npm run build           # next build
+```
+
 ### Environment variables
 
 | Variable | Purpose | Default in demo |
@@ -171,6 +236,9 @@ Workspace:
 
 - `/dashboard` — overview with stats and recent records
 - `/dashboard/inbox` — Approval Inbox across all seven modules
+- `/dashboard/access-accept` — Access Accept command center
+- `/dashboard/access-accept/new` — Access Accept intake form (accepts prefill query params)
+- `/dashboard/access-accept/events` — Mock identity event feed
 - `/dashboard/risk-records` — Risk Records table
 - `/dashboard/risk-records/new` — six-step Risk Record Creation Wizard
 - `/dashboard/risk-records/new?module=ai_action_gate` — wizard with module preselected
@@ -238,7 +306,8 @@ module:
 | Module | Accept | Reject | Remediate |
 | --- | --- | --- | --- |
 | AI Action Gate | Approve Action | Reject Action | Require Review |
-| Access Accept | Approve Access | Reject Access | Require More Evidence |
+| Access Accept (default) | Approve Access | Reject Access | Require More Evidence |
+| Access Accept (suspicious login) | Accept Login Risk | Reject / Block | Escalate Login |
 | Secure Release Gate | Approve Release | Block Release | Require Remediation |
 | Device Accept | Approve Device | Reject Device | Require More Evidence |
 | Evidence Desk | Mark Reviewed | Request Update | Export Evidence |

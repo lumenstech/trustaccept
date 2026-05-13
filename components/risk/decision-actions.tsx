@@ -7,8 +7,8 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea, FieldGroup, Input } from "@/components/ui/form";
+import { getApprovalLabels } from "@/lib/access";
 import { nextStepFor, type DecisionAction } from "@/lib/decision";
-import { getModule } from "@/lib/modules";
 import type { RiskRecord } from "@/lib/types";
 
 export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }) {
@@ -20,7 +20,7 @@ export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }
   const [pending, setPending] = useState<DecisionAction | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const module = useMemo(() => getModule(record.module), [record.module]);
+  const labels = useMemo(() => getApprovalLabels(record), [record]);
 
   async function decide(action: DecisionAction) {
     setError(null);
@@ -111,7 +111,7 @@ export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }
               onClick={() => decide("accept")}
             >
               <ShieldCheck className="h-4 w-4" />
-              {pending === "accept" ? "Recording…" : module.acceptLabel}
+              {pending === "accept" ? "Recording…" : labels.accept}
             </Button>
             <Button
               variant="reject"
@@ -119,7 +119,7 @@ export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }
               disabled={lastAction !== null || pending !== null}
               onClick={() => decide("reject")}
             >
-              {pending === "reject" ? "Recording…" : module.rejectLabel}
+              {pending === "reject" ? "Recording…" : labels.reject}
             </Button>
             <Button
               variant="remediate"
@@ -127,7 +127,7 @@ export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }
               disabled={lastAction !== null || pending !== null}
               onClick={() => decide("remediate")}
             >
-              {pending === "remediate" ? "Recording…" : module.remediateLabel}
+              {pending === "remediate" ? "Recording…" : labels.remediate}
             </Button>
           </div>
           {error ? <p className="text-sm text-danger">{error}</p> : null}

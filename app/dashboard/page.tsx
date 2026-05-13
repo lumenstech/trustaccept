@@ -62,6 +62,9 @@ export default function DashboardOverview() {
             <Link href="/dashboard/inbox">
               <Button>Open Approval Inbox</Button>
             </Link>
+            <Link href="/dashboard/access-accept">
+              <Button variant="outline">Access Accept</Button>
+            </Link>
             <Link href="/dashboard/evidence-desk">
               <Button variant="outline">Evidence Desk</Button>
             </Link>

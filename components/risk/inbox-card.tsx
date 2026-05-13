@@ -3,11 +3,13 @@ import { ArrowUpRight, Building2, CalendarClock, Clock, User2 } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge, RiskLevelBadge, StatusBadge } from "@/components/ui/badge";
+import { getApprovalLabels } from "@/lib/access";
 import { getModule } from "@/lib/modules";
 import type { RiskRecord } from "@/lib/types";
 
 export function InboxCard({ record }: { record: RiskRecord }) {
   const module = getModule(record.module);
+  const labels = getApprovalLabels(record);
   const expiresOrDue = record.expirationDate ?? record.dueDate;
 
   return (
@@ -62,13 +64,13 @@ export function InboxCard({ record }: { record: RiskRecord }) {
       </CardContent>
       <CardFooter className="flex-wrap gap-2">
         <Button variant="accept" size="sm">
-          {module.acceptLabel}
+          {labels.accept}
         </Button>
         <Button variant="reject" size="sm">
-          {module.rejectLabel}
+          {labels.reject}
         </Button>
         <Button variant="remediate" size="sm">
-          {module.remediateLabel}
+          {labels.remediate}
         </Button>
         <Link href={`/approve/${record.id}`} className="ml-auto">
           <Button variant="outline" size="sm">

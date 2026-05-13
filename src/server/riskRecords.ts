@@ -1,3 +1,4 @@
+import type { AccessContext } from "@/lib/access";
 import { deriveRiskScore } from "@/lib/seed-data";
 import type {
   AuditTimelineEntry,
@@ -38,6 +39,7 @@ export interface RiskRecordCreateData {
   technicalContext: string;
   frameworkTags: string[];
   sourceReferences: SourceReference[];
+  accessContext?: AccessContext;
 }
 
 export interface RiskRecordUpdateData
@@ -162,6 +164,7 @@ export function createRiskRecord(
     technicalContext: data.technicalContext,
     frameworkTags: data.frameworkTags,
     sourceReferences: data.sourceReferences,
+    accessContext: data.accessContext,
     auditTimeline: [initialEntry],
     createdAt: now,
     updatedAt: now,

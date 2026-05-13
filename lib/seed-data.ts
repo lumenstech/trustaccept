@@ -80,7 +80,7 @@ const RAW_RECORDS: RiskRecord[] = [
     title: "Admin requests break-glass access to production tenant",
     description:
       "Site reliability engineer is requesting temporary GlobalAdmin access to the production tenant to investigate a paging anomaly affecting the EU region.",
-    sourceSystem: "Entra ID",
+    sourceSystem: "Microsoft Entra",
     sourceType: "identity.priv_request",
     riskLevel: "critical",
     status: "pending",
@@ -100,11 +100,21 @@ const RAW_RECORDS: RiskRecord[] = [
     frameworkTags: ["NIST 800-53 AC-2(7)", "NIST 800-53 AC-5", "ISO 27001 A.9.2.3"],
     sourceReferences: [
       { label: "Incident INC-50219", system: "PagerDuty", externalId: "INC-50219" },
-      { label: "Entra access request", system: "Entra ID", externalId: "req-9981" },
+      { label: "Entra access request", system: "Microsoft Entra", externalId: "req-9981" },
     ],
+    accessContext: {
+      requestType: "break-glass-access",
+      requester: "marcus.lee@lumens.io",
+      identityProvider: "microsoft-entra",
+      userOrServiceAccount: "marcus.lee@lumens.io",
+      targetSystem: "prod-eu-1 tenant",
+      privilegeLevel: "GlobalAdmin",
+      requestedDuration: "4 hours",
+      approvalOwner: "Alex Greene",
+    },
     auditTimeline: [
       {
-        actor: "Entra ID",
+        actor: "Microsoft Entra",
         action: "raised",
         detail: "GlobalAdmin JIT request submitted by Marcus Lee.",
         occurredAt: "2026-05-13T07:42:00Z",
@@ -114,6 +124,335 @@ const RAW_RECORDS: RiskRecord[] = [
         action: "routed",
         detail: "Routed to Platform SRE approver group with executive notify.",
         occurredAt: "2026-05-13T07:42:09Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-002",
+    module: "access-accept",
+    title: "Service account requests new API key",
+    description:
+      "Long-running billing-api service account is requesting a fresh API key. No expiration submitted with the request.",
+    sourceSystem: "Auth0",
+    sourceType: "identity.api_key_request",
+    riskLevel: "medium",
+    status: "pending",
+    owner: "Dana Okafor",
+    department: "Billing Engineering",
+    dueDate: "2026-05-15",
+    expirationDate: "2026-08-13",
+    reviewDate: "2026-05-15",
+    compensatingControls:
+      "Key scoped to billing-api production, IP allow-list applied, 90-day expiration enforced, key usage telemetry on.",
+    evidenceSummary:
+      "Auth0 management API request, prior key rotation logs, service ownership record.",
+    businessJustification:
+      "Existing key approaching expiration; rotation needed to avoid May invoice run interruption.",
+    technicalContext:
+      "Auth0 tenant: lumens-prod. Service: billing-api. Requested scopes: read:invoices, write:invoices.",
+    frameworkTags: ["NIST 800-53 IA-5", "NIST 800-53 AC-6", "SOC 2 CC6.1"],
+    sourceReferences: [
+      { label: "Auth0 management request", system: "Auth0", externalId: "req-AC-0451" },
+      { label: "Service ownership: billing-platform", system: "CMDB" },
+    ],
+    accessContext: {
+      requestType: "api-key-creation",
+      requester: "platform-billing@lumens.io",
+      identityProvider: "auth0",
+      userOrServiceAccount: "svc-billing-api",
+      targetSystem: "billing-api production",
+      privilegeLevel: "API client (scoped)",
+      requestedDuration: "90 days",
+      approvalOwner: "Dana Okafor",
+    },
+    auditTimeline: [
+      {
+        actor: "Auth0",
+        action: "raised",
+        detail: "API key request raised for svc-billing-api.",
+        occurredAt: "2026-05-12T16:12:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-003",
+    module: "access-accept",
+    title: "User requests MFA recovery after lost device",
+    description:
+      "Customer Operations lead reports a lost authenticator device. Recovery requires owner-level approval and an out-of-band identity check.",
+    sourceSystem: "Duo",
+    sourceType: "identity.mfa_recovery",
+    riskLevel: "medium",
+    status: "pending",
+    owner: "Priya Shah",
+    department: "Customer Operations",
+    dueDate: "2026-05-14",
+    expirationDate: "2026-05-21",
+    reviewDate: "2026-05-14",
+    compensatingControls:
+      "Manager video confirmation, temporary Duo bypass code limited to 24 hours, full re-enrollment within 7 days.",
+    evidenceSummary:
+      "Duo recovery ticket, manager attestation, prior sign-in history, device lost report.",
+    businessJustification:
+      "User locked out of business systems; without recovery, May customer churn deck cannot ship.",
+    technicalContext:
+      "Duo policy: high-assurance group. Recovery method: temporary bypass + re-enroll on managed device.",
+    frameworkTags: ["NIST 800-63B 5.2.5", "NIST 800-53 IA-2", "SOC 2 CC6.1"],
+    sourceReferences: [
+      { label: "Duo recovery ticket", system: "Duo", externalId: "DUO-RC-7741" },
+      { label: "Manager attestation", system: "ServiceNow", externalId: "REQ-22501" },
+    ],
+    accessContext: {
+      requestType: "mfa-recovery",
+      requester: "priya.shah@lumens.io",
+      identityProvider: "duo",
+      userOrServiceAccount: "priya.shah@lumens.io",
+      targetSystem: "Duo enrollment",
+      privilegeLevel: "Standard user (MFA bypass)",
+      requestedDuration: "24 hours",
+      approvalOwner: "Priya Shah",
+    },
+    auditTimeline: [
+      {
+        actor: "Duo",
+        action: "raised",
+        detail: "MFA recovery request opened by user.",
+        occurredAt: "2026-05-13T08:11:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-004",
+    module: "access-accept",
+    title: "Suspicious login requires escalation",
+    description:
+      "Okta ThreatInsight flagged a sign-in from an unfamiliar geography on a device that has never authenticated before. Session is held pending review.",
+    sourceSystem: "Okta",
+    sourceType: "identity.suspicious_login",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Marcus Lee",
+    department: "Platform SRE",
+    dueDate: "2026-05-13",
+    expirationDate: "2026-05-14",
+    reviewDate: "2026-05-13",
+    compensatingControls:
+      "Session held in step-up state, geo-velocity rule applied, manager attestation requested, audit log replay on hand.",
+    evidenceSummary:
+      "Okta sign-in event, geo-velocity rule snapshot, prior login history, manager call recording.",
+    businessJustification:
+      "User asserts legitimate travel; cannot proceed without owner review given prior incident IR-2025-77.",
+    technicalContext:
+      "User: marcus.lee@lumens.io. Source: Frankfurt. Device: previously unseen iOS. MFA challenge: satisfied.",
+    frameworkTags: ["NIST 800-53 AU-6", "NIST 800-53 IA-2", "SOC 2 CC7.2"],
+    sourceReferences: [
+      { label: "Okta event 88291", system: "Okta", externalId: "88291" },
+      { label: "Prior incident IR-2025-77", system: "TrustAccept" },
+    ],
+    accessContext: {
+      requestType: "suspicious-login",
+      requester: "marcus.lee@lumens.io",
+      identityProvider: "okta",
+      userOrServiceAccount: "marcus.lee@lumens.io",
+      targetSystem: "prod-eu-1 tenant",
+      privilegeLevel: "Standard user (held in step-up)",
+      requestedDuration: "Single session",
+      approvalOwner: "Alex Greene",
+    },
+    auditTimeline: [
+      {
+        actor: "Okta",
+        action: "flagged",
+        detail: "Sign-in placed in step-up state by ThreatInsight rule.",
+        occurredAt: "2026-05-13T07:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-005",
+    module: "access-accept",
+    title: "Contractor requests temporary admin access",
+    description:
+      "Vendor engineer onboarding for the Atlanta data center security upgrade is requesting time-bound admin access to the build-tools group.",
+    sourceSystem: "Okta",
+    sourceType: "identity.contractor_onboard",
+    riskLevel: "medium",
+    status: "pending",
+    owner: "Lena Petrova",
+    department: "IT Operations",
+    dueDate: "2026-05-15",
+    expirationDate: "2026-06-15",
+    reviewDate: "2026-05-15",
+    compensatingControls:
+      "Sponsor required for every session, scope limited to build-tools group, automatic revoke after 30 days, weekly access review.",
+    evidenceSummary:
+      "Vendor authorization letter, SoW reference, Okta group membership snapshot, sponsor record.",
+    businessJustification:
+      "Atlanta facility upgrade requires vendor admin access during install window through mid-June.",
+    technicalContext:
+      "Okta group: build-tools-admins. Sponsor: Lena Petrova. SoW: SOW-2026-014.",
+    frameworkTags: ["NIST 800-53 AC-2", "NIST 800-53 PS-7", "ISO 27001 A.6.3"],
+    sourceReferences: [
+      { label: "SoW SOW-2026-014", system: "Contracts" },
+      { label: "Okta onboarding REQ-77410", system: "Okta", externalId: "REQ-77410" },
+    ],
+    accessContext: {
+      requestType: "contractor-temporary-access",
+      requester: "external+contractor@vendorco.com",
+      identityProvider: "okta",
+      userOrServiceAccount: "external+contractor@vendorco.com",
+      targetSystem: "build-tools-admins group",
+      privilegeLevel: "Group admin (build-tools)",
+      requestedDuration: "30 days",
+      approvalOwner: "Lena Petrova",
+    },
+    auditTimeline: [
+      {
+        actor: "Okta",
+        action: "raised",
+        detail: "Contractor onboarding request submitted.",
+        occurredAt: "2026-05-13T09:01:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-006",
+    module: "access-accept",
+    title: "Privileged role assignment requires owner approval",
+    description:
+      "Promotion to GitHub Organization Owner for the lumenstech org requires named owner approval and a 90-day review.",
+    sourceSystem: "GitHub",
+    sourceType: "identity.role_assignment",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Dana Okafor",
+    department: "Engineering Productivity",
+    dueDate: "2026-05-16",
+    expirationDate: "2026-08-13",
+    reviewDate: "2026-05-16",
+    compensatingControls:
+      "Two-person approval required, 90-day review window, audit log replay on assignment, SAML SSO and security-key MFA enforced.",
+    evidenceSummary:
+      "GitHub role assignment request, prior org owner roster, SAML SSO policy snapshot.",
+    businessJustification:
+      "Engineering productivity lead requires Org Owner role to administer required workflows for Q3 release plan.",
+    technicalContext:
+      "Org: lumenstech. Current role: Maintainer. Target role: Organization Owner.",
+    frameworkTags: ["NIST 800-53 AC-5", "NIST 800-53 AC-6(2)", "SOC 2 CC6.1"],
+    sourceReferences: [
+      { label: "GitHub change PR-883", system: "GitHub", externalId: "PR-883" },
+      { label: "Engineering Productivity charter", system: "Confluence" },
+    ],
+    accessContext: {
+      requestType: "privileged-role-assignment",
+      requester: "dana.okafor@lumens.io",
+      identityProvider: "github",
+      userOrServiceAccount: "dana.okafor",
+      targetSystem: "lumenstech GitHub organization",
+      privilegeLevel: "Organization Owner",
+      requestedDuration: "90 days (with review)",
+      approvalOwner: "Alex Greene",
+    },
+    auditTimeline: [
+      {
+        actor: "GitHub",
+        action: "raised",
+        detail: "Org Owner role assignment requested.",
+        occurredAt: "2026-05-13T08:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-007",
+    module: "access-accept",
+    title: "API key creation request needs expiration date",
+    description:
+      "Internal IAM raised a new API key creation request for the analytics service account without an expiration. Approval requires an expiration date before issuing.",
+    sourceSystem: "Internal IAM",
+    sourceType: "identity.api_key_request",
+    riskLevel: "medium",
+    status: "pending",
+    owner: "Jordan Pak",
+    department: "Analytics Platform",
+    dueDate: "2026-05-17",
+    expirationDate: "2026-08-15",
+    reviewDate: "2026-05-17",
+    compensatingControls:
+      "Expiration set to 90 days, scope limited to analytics read, secret rotated via vault, usage monitoring enabled.",
+    evidenceSummary:
+      "IAM request, scope justification, prior key rotation evidence, vault policy snapshot.",
+    businessJustification:
+      "Analytics platform requires a new key for the May refresh; existing key reaches end of life.",
+    technicalContext:
+      "Service: analytics-service. Scope: read:warehouse. Key TTL requested: 90 days.",
+    frameworkTags: ["NIST 800-53 IA-5", "NIST 800-53 AC-6", "SOC 2 CC6.1"],
+    sourceReferences: [
+      { label: "IAM request IAM-9921", system: "Internal IAM", externalId: "IAM-9921" },
+      { label: "Vault policy: analytics-read", system: "Vault" },
+    ],
+    accessContext: {
+      requestType: "api-key-creation",
+      requester: "jordan.pak@lumens.io",
+      identityProvider: "internal-iam",
+      userOrServiceAccount: "svc-analytics-service",
+      targetSystem: "analytics warehouse",
+      privilegeLevel: "API client (read)",
+      requestedDuration: "90 days",
+      approvalOwner: "Jordan Pak",
+    },
+    auditTimeline: [
+      {
+        actor: "Internal IAM",
+        action: "raised",
+        detail: "API key creation request submitted; expiration required.",
+        occurredAt: "2026-05-12T13:45:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-acc-008",
+    module: "access-accept",
+    title: "Entra admin consent request requires review",
+    description:
+      "Third-party Marketing SaaS application is requesting admin consent for Mail.Read and User.Read.All on the corporate Entra tenant.",
+    sourceSystem: "Microsoft Entra",
+    sourceType: "identity.admin_consent_request",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Sara Romero",
+    department: "Office of the CISO",
+    dueDate: "2026-05-18",
+    expirationDate: "2026-11-13",
+    reviewDate: "2026-08-13",
+    compensatingControls:
+      "Scopes downgraded to delegated where possible, consent capped at six months, vendor SIG-Lite on file, conditional access policy applied.",
+    evidenceSummary:
+      "Entra consent request, vendor SIG-Lite, data classification, prior admin consent precedent.",
+    businessJustification:
+      "Marketing team is rolling out a new campaign measurement tool that requires read access to specific groups.",
+    technicalContext:
+      "App ID: 7f3e-... Requested scopes: Mail.Read (app), User.Read.All (delegated).",
+    frameworkTags: ["NIST 800-53 AC-3", "NIST 800-53 SA-9", "ISO 27001 A.5.19"],
+    sourceReferences: [
+      { label: "Entra consent request", system: "Microsoft Entra", externalId: "consent-4421" },
+      { label: "Vendor SIG-Lite", system: "Vendor Risk" },
+    ],
+    accessContext: {
+      requestType: "admin-consent-review",
+      requester: "owner@lumens.io",
+      identityProvider: "microsoft-entra",
+      userOrServiceAccount: "marketing-saas-app",
+      targetSystem: "corporate Entra tenant",
+      privilegeLevel: "Admin consent (Mail.Read, User.Read.All)",
+      requestedDuration: "6 months",
+      approvalOwner: "Sara Romero",
+    },
+    auditTimeline: [
+      {
+        actor: "Microsoft Entra",
+        action: "raised",
+        detail: "Admin consent request submitted.",
+        occurredAt: "2026-05-12T18:09:00Z",
       },
     ],
   },

@@ -59,6 +59,7 @@ export interface RiskRecord {
   frameworkTags: string[];
   sourceReferences: SourceReference[];
   auditTimeline: AuditTimelineEntry[];
+  accessContext?: import("./access").AccessContext;
   createdAt?: string;
   updatedAt?: string;
   createdById?: string;

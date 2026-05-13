@@ -31,6 +31,8 @@ describe("ctaRouteFor", () => {
   it("exposes a stable map of every CTA key", () => {
     expect(Object.keys(CTA_ROUTES).sort()).toEqual(
       [
+        "access_accept_primary",
+        "access_accept_secondary",
         "homepage_primary",
         "homepage_secondary",
         "managed_evidence_desk",

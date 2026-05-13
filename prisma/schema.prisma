@@ -1,0 +1,104 @@
+// TrustAccept core schema
+// PostgreSQL-compatible. Mock auth for now; identities live in the User table.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductModule {
+  AI_ACTION_GATE
+  ACCESS_ACCEPT
+  VULNERABILITY_ACCEPT
+  KEV_EXPOSURE_REVIEW
+  SECURE_RELEASE_GATE
+  DEVICE_ACCEPT
+  EVIDENCE_DESK
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RiskStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  REMEDIATION_REQUIRED
+  EXPIRED
+}
+
+enum Decision {
+  ACCEPT
+  REJECT
+  REMEDIATE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      String   @default("approver")
+  createdAt DateTime @default(now())
+
+  ownedRecords    RiskRecord[] @relation("RecordOwner")
+  decidedRecords  RiskRecord[] @relation("RecordDecider")
+  timelineEntries AuditTimelineEntry[]
+}
+
+model RiskRecord {
+  id                    String         @id @default(cuid())
+  module                ProductModule
+  title                 String
+  description           String         @db.Text
+  sourceSystem          String
+  sourceType            String
+  riskLevel             RiskLevel
+  status                RiskStatus     @default(PENDING)
+
+  ownerId               String?
+  owner                 User?          @relation("RecordOwner", fields: [ownerId], references: [id])
+  department            String
+
+  dueDate               DateTime?
+  expirationDate        DateTime?
+  reviewDate            DateTime?
+
+  decision              Decision?
+  decisionById          String?
+  decisionBy            User?          @relation("RecordDecider", fields: [decisionById], references: [id])
+  decisionAt            DateTime?
+
+  compensatingControls  String         @db.Text
+  evidenceSummary       String         @db.Text
+  businessJustification String         @db.Text
+  technicalContext      String         @db.Text
+
+  frameworkTags         String[]
+  sourceReferences      Json
+
+  auditTimeline         AuditTimelineEntry[]
+
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model AuditTimelineEntry {
+  id           String     @id @default(cuid())
+  recordId    String
+  record      RiskRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  actorId     String?
+  actor       User?      @relation(fields: [actorId], references: [id])
+  actorLabel  String
+  action      String
+  detail      String     @db.Text
+  occurredAt  DateTime   @default(now())
+}

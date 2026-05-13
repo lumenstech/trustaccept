@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Boxes,
+  Bug,
   FileSignature,
   Inbox,
   KeyRound,
@@ -16,6 +17,7 @@ const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/inbox", label: "Approval Inbox", icon: Inbox },
   { href: "/dashboard/access-accept", label: "Access Accept", icon: KeyRound },
+  { href: "/dashboard/vulnerability-acceptance", label: "Vulnerability Accept", icon: Bug },
   { href: "/dashboard/risk-records", label: "Risk Records", icon: ShieldQuestion },
   { href: "/dashboard/product-modules", label: "Product Modules", icon: Boxes },
   { href: "/dashboard/evidence-desk", label: "Evidence Desk", icon: FileSignature },

@@ -36,8 +36,8 @@ export const MODULES: ProductModuleMeta[] = [
     tagline: "Document risk acceptance for vulnerabilities you cannot patch today.",
     description:
       "Capture compensating controls, expiration dates, and owner sign-off for vulnerability exceptions in a single defensible record.",
-    acceptLabel: "Accept Risk",
-    rejectLabel: "Reject Risk",
+    acceptLabel: "Accept Finding Risk",
+    rejectLabel: "Reject Acceptance",
     remediateLabel: "Require Remediation",
   },
   {

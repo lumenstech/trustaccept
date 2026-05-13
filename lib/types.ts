@@ -60,6 +60,7 @@ export interface RiskRecord {
   sourceReferences: SourceReference[];
   auditTimeline: AuditTimelineEntry[];
   accessContext?: import("./access").AccessContext;
+  vulnerabilityContext?: import("./vulnerability").VulnerabilityContext;
   createdAt?: string;
   updatedAt?: string;
   createdById?: string;

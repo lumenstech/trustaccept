@@ -71,6 +71,14 @@ export default function ProductModulesPage() {
                       Command center <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   ) : null}
+                  {module.key === "vulnerability-accept" ? (
+                    <Link
+                      href="/dashboard/vulnerability-acceptance"
+                      className="inline-flex items-center gap-1 text-sm text-primary"
+                    >
+                      Command center <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>

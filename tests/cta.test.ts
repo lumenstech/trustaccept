@@ -42,6 +42,8 @@ describe("ctaRouteFor", () => {
         "product_secondary",
         "risk_record",
         "secure_release_program",
+        "vulnerability_accept_primary",
+        "vulnerability_accept_secondary",
       ].sort(),
     );
   });

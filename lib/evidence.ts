@@ -1,6 +1,7 @@
 import { getAccessRequestMeta, getIdentityProviderMeta } from "./access";
 import { getModule } from "./modules";
 import type { RiskRecord } from "./types";
+import { getVulnerabilitySourceMeta } from "./vulnerability";
 
 export interface AccessPacketFields {
   requestType: string;
@@ -11,6 +12,21 @@ export interface AccessPacketFields {
   privilegeLevel: string;
   requestedDuration: string;
   approvalOwner: string;
+}
+
+export interface VulnerabilityPacketFields {
+  scannerSource: string;
+  findingId: string;
+  severity: string;
+  affectedAsset: string;
+  repositoryOrApplication: string;
+  cve: string;
+  cwe: string;
+  businessImpact: string;
+  technicalImpact: string;
+  remediationPlan: string;
+  requestedDecision: string;
+  releaseBlocking: boolean;
 }
 
 export interface EvidencePacketSummary {
@@ -25,6 +41,7 @@ export interface EvidencePacketSummary {
   frameworkTags: string[];
   executiveSummary: string;
   accessFields?: AccessPacketFields;
+  vulnerabilityFields?: VulnerabilityPacketFields;
 }
 
 function decisionOutcomeLabel(record: RiskRecord): string {
@@ -70,12 +87,33 @@ export function summarizeRecordForEvidence(record: RiskRecord): EvidencePacketSu
     };
   }
 
+  if (record.module === "vulnerability-accept" && record.vulnerabilityContext) {
+    const ctx = record.vulnerabilityContext;
+    summary.vulnerabilityFields = {
+      scannerSource: getVulnerabilitySourceMeta(ctx.source).label,
+      findingId: ctx.findingId,
+      severity: ctx.severity.toUpperCase(),
+      affectedAsset: ctx.affectedAsset,
+      repositoryOrApplication: ctx.repositoryOrApplication,
+      cve: ctx.cve ?? "—",
+      cwe: ctx.cwe ?? "—",
+      businessImpact: ctx.businessImpact,
+      technicalImpact: ctx.technicalImpact,
+      remediationPlan: ctx.remediationPlan,
+      requestedDecision: ctx.requestedDecision,
+      releaseBlocking: ctx.releaseBlocking ?? false,
+    };
+  }
+
   return summary;
 }
 
 export function buildExecutiveSummary(record: RiskRecord): string {
   if (record.module === "access-accept" && record.accessContext) {
     return buildAccessExecutiveSummary(record);
+  }
+  if (record.module === "vulnerability-accept" && record.vulnerabilityContext) {
+    return buildVulnerabilityExecutiveSummary(record);
   }
 
   const module = getModule(record.module);
@@ -117,6 +155,36 @@ export function buildAccessExecutiveSummary(record: RiskRecord): string {
     `This Access Accept record documents a high-risk identity or access decision, including requester, target system, requested privilege, expiration, compensating controls, and review timeline.`,
     `Record ${record.id} — ${requestLabel} for ${ctx.requester} via ${providerLabel}.`,
     `Target ${ctx.targetSystem} at privilege level ${ctx.privilegeLevel}.${duration}`,
+    `Owner ${record.owner} (${record.department}).`,
+    lifecycle + expires + review,
+    "This record is NIST-aligned, CISA KEV-aware, and designed to support audit evidence.",
+  ].join(" ");
+}
+
+export function buildVulnerabilityExecutiveSummary(record: RiskRecord): string {
+  const ctx = record.vulnerabilityContext;
+  if (!ctx) {
+    return buildExecutiveSummary({ ...record, module: "vulnerability-accept" });
+  }
+
+  const sourceLabel = getVulnerabilitySourceMeta(ctx.source).label;
+  const expires = record.expirationDate
+    ? ` Expiration set for ${record.expirationDate}.`
+    : "";
+  const review = record.reviewDate ? ` Review scheduled ${record.reviewDate}.` : "";
+  const lifecycle = record.decision
+    ? `Decision recorded: ${record.decision}.`
+    : "Decision pending.";
+  const cveOrCwe = ctx.cve
+    ? ` CVE ${ctx.cve}.`
+    : ctx.cwe
+      ? ` CWE ${ctx.cwe}.`
+      : "";
+  const blocking = ctx.releaseBlocking ? " Release-blocking." : "";
+
+  return [
+    `This Vulnerability Accept record documents the disposition of a scanner or assessment finding, including severity, affected asset, owner, compensating controls, expiration date, and remediation timeline.`,
+    `Record ${record.id} — ${sourceLabel} finding ${ctx.findingId} (severity ${ctx.severity.toUpperCase()}) on ${ctx.affectedAsset} in ${ctx.repositoryOrApplication}.${cveOrCwe}${blocking}`,
     `Owner ${record.owner} (${record.department}).`,
     lifecycle + expires + review,
     "This record is NIST-aligned, CISA KEV-aware, and designed to support audit evidence.",

@@ -463,7 +463,7 @@ const RAW_RECORDS: RiskRecord[] = [
     description:
       "Fortify static scan identified a deserialization vulnerability in the legacy billing service. Engineering is requesting a 30-day risk acceptance while the affected library is replaced.",
     sourceSystem: "Fortify",
-    sourceType: "vuln.finding",
+    sourceType: "vuln.fortify",
     riskLevel: "critical",
     status: "pending",
     owner: "Dana Okafor",
@@ -484,12 +484,403 @@ const RAW_RECORDS: RiskRecord[] = [
       { label: "Fortify F-2026-441", system: "Fortify", externalId: "F-2026-441" },
       { label: "WAF rule R-882", system: "Cloudflare", externalId: "R-882" },
     ],
+    vulnerabilityContext: {
+      source: "fortify",
+      findingId: "F-2026-441",
+      severity: "critical",
+      affectedAsset: "billing-service / legacy deserializer",
+      repositoryOrApplication: "billing-service",
+      cwe: "CWE-502",
+      businessImpact:
+        "Disposition affects May invoice run timing; rushing the patch risks billing outage.",
+      technicalImpact:
+        "Authenticated internal call surface; unreachable from public after WAF rule R-882.",
+      remediationPlan:
+        "Replace vulnerable serializer library in coordinated upgrade window; full patch by June 12.",
+      requestedDecision: "accept",
+      releaseBlocking: true,
+    },
     auditTimeline: [
       {
         actor: "Fortify",
         action: "ingested",
         detail: "Critical finding ingested into Vulnerability Accept module.",
         occurredAt: "2026-05-12T15:02:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-002",
+    module: "vulnerability-accept",
+    title: "Snyk dependency vulnerability needs temporary exception",
+    description:
+      "Snyk flagged a high-severity vulnerability in a transitive lodash dependency on the billing-service. Engineering needs a 30-day exception while the rebuild is coordinated.",
+    sourceSystem: "Snyk",
+    sourceType: "vuln.snyk",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Jordan Pak",
+    department: "Application Security",
+    dueDate: "2026-05-20",
+    expirationDate: "2026-06-19",
+    reviewDate: "2026-05-20",
+    compensatingControls:
+      "Affected code path behind authentication; runtime monitoring elevated; CI gate exception scoped to billing-service only.",
+    evidenceSummary:
+      "Snyk finding SNYK-JS-LODASH-7710, dependency graph, prior rebuild runbook.",
+    businessJustification:
+      "Library upgrade requires a coordinated rebuild across three services; rushing it risks May invoice cycle.",
+    technicalContext:
+      "Vulnerable function not reachable from public surface; authenticated paths only.",
+    frameworkTags: ["NIST 800-53 RA-5", "NIST SSDF PW.6", "SOC 2 CC7.1"],
+    sourceReferences: [
+      { label: "Snyk SNYK-JS-LODASH-7710", system: "Snyk", externalId: "SNYK-JS-LODASH-7710" },
+      { label: "CVE-2026-22014", system: "NVD" },
+    ],
+    vulnerabilityContext: {
+      source: "snyk",
+      findingId: "SNYK-JS-LODASH-7710",
+      severity: "high",
+      affectedAsset: "billing-service / node_modules/lodash",
+      repositoryOrApplication: "billing-service",
+      cve: "CVE-2026-22014",
+      cwe: "CWE-1035",
+      businessImpact:
+        "Upgrading mid-May invoice cycle introduces deployment risk on a regulated cadence.",
+      technicalImpact:
+        "Vulnerable function reachable only from authenticated administrative endpoints.",
+      remediationPlan:
+        "Coordinated rebuild of billing-service, ledger-service, and reporting-service by June 19.",
+      requestedDecision: "accept",
+      releaseBlocking: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Snyk",
+        action: "ingested",
+        detail: "Dependency finding raised; auto-routed to Vulnerability Accept.",
+        occurredAt: "2026-05-12T19:11:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-003",
+    module: "vulnerability-accept",
+    title: "GitHub code scanning alert requires owner assignment",
+    description:
+      "GitHub Advanced Security flagged a secret-scanning alert in the integrations-ci repository. The alert is unassigned and needs an owner before disposition.",
+    sourceSystem: "GitHub Advanced Security",
+    sourceType: "vuln.github_advanced_security",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Sara Romero",
+    department: "Application Security",
+    dueDate: "2026-05-15",
+    expirationDate: "2026-05-29",
+    reviewDate: "2026-05-15",
+    compensatingControls:
+      "Rotation playbook executed for the exposed credential; commit history scrubbed; audit log review enabled.",
+    evidenceSummary:
+      "GHAS-SECRET-9921 alert payload, rotation log, repository setting snapshot.",
+    businessJustification:
+      "Unassigned high-severity alert blocks SOC 2 evidence; needs named owner to track remediation.",
+    technicalContext:
+      "Third-party API key surfaced in a CI workflow run; scope limited to that integration.",
+    frameworkTags: ["NIST 800-53 SI-2", "NIST SSDF PW.7", "SOC 2 CC7.1"],
+    sourceReferences: [
+      {
+        label: "GHAS alert GHAS-SECRET-9921",
+        system: "GitHub Advanced Security",
+        externalId: "GHAS-SECRET-9921",
+      },
+      { label: "Repo lumenstech/integrations-ci", system: "GitHub" },
+    ],
+    vulnerabilityContext: {
+      source: "github-advanced-security",
+      findingId: "GHAS-SECRET-9921",
+      severity: "high",
+      affectedAsset: "lumenstech/integrations-ci",
+      repositoryOrApplication: "lumenstech/integrations-ci",
+      businessImpact:
+        "Owner-less alert undermines SOC 2 evidence for secret management controls.",
+      technicalImpact:
+        "Key surfaced in a CI run; rotated, but disposition record required for audit.",
+      remediationPlan:
+        "Owner assignment + retrospective; tighten secret push protection rule on the repo.",
+      requestedDecision: "remediate",
+      releaseBlocking: false,
+    },
+    auditTimeline: [
+      {
+        actor: "GitHub Advanced Security",
+        action: "raised",
+        detail: "Secret scanning alert raised; owner assignment pending.",
+        occurredAt: "2026-05-12T20:05:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-004",
+    module: "vulnerability-accept",
+    title: "Wiz cloud exposure needs compensating control",
+    description:
+      "Wiz flagged a storage bucket on the data-platform project as exposed to the public internet. Disposition requires a compensating control or remediation.",
+    sourceSystem: "Wiz",
+    sourceType: "vuln.wiz",
+    riskLevel: "critical",
+    status: "pending",
+    owner: "Marcus Lee",
+    department: "Platform SRE",
+    dueDate: "2026-05-14",
+    expirationDate: "2026-05-28",
+    reviewDate: "2026-05-14",
+    compensatingControls:
+      "Bucket policy tightened to VPC endpoint only; encryption rotation enforced; access log review scheduled.",
+    evidenceSummary:
+      "Wiz finding WIZ-EXP-4421, prior bucket policy snapshot, access log replay.",
+    businessJustification:
+      "Reporting consumers depend on the bucket through approved channels; full takedown impacts reporting SLA.",
+    technicalContext:
+      "S3-class bucket previously public via legacy policy; mis-scoped principal removed; new policy in place.",
+    frameworkTags: ["NIST 800-53 SC-7", "CIS Cloud 2.1", "SOC 2 CC7.2"],
+    sourceReferences: [
+      { label: "Wiz WIZ-EXP-4421", system: "Wiz", externalId: "WIZ-EXP-4421" },
+      { label: "Bucket policy diff", system: "AWS Config" },
+    ],
+    vulnerabilityContext: {
+      source: "wiz",
+      findingId: "WIZ-EXP-4421",
+      severity: "critical",
+      affectedAsset: "prod-eu-1 / s3-internal-reports",
+      repositoryOrApplication: "data-platform",
+      businessImpact:
+        "Reporting SLA depends on continued access through approved consumers.",
+      technicalImpact:
+        "Public exposure remediated by VPC endpoint policy; legacy principal removed.",
+      remediationPlan:
+        "Bucket review every two weeks; convert to least-privilege per-consumer roles by May 28.",
+      requestedDecision: "accept",
+      releaseBlocking: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Wiz",
+        action: "flagged",
+        detail: "Public exposure surfaced via cloud posture rule.",
+        occurredAt: "2026-05-12T17:40:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-005",
+    module: "vulnerability-accept",
+    title: "Tenable critical CVE accepted until maintenance window",
+    description:
+      "Tenable identified a CISA KEV-listed CVE on three internet-facing edge gateways. Engineering proposes acceptance until the May maintenance window.",
+    sourceSystem: "Tenable",
+    sourceType: "vuln.tenable",
+    riskLevel: "critical",
+    status: "pending",
+    owner: "Sara Romero",
+    department: "Infrastructure Security",
+    dueDate: "2026-05-22",
+    expirationDate: "2026-05-29",
+    reviewDate: "2026-05-22",
+    compensatingControls:
+      "Geo-fenced ingress, IPS signature for the exploit deployed, anomalous traffic alerting elevated.",
+    evidenceSummary:
+      "Tenable scan TENABLE-99182, CISA KEV listing, IPS signature deployment record.",
+    businessJustification:
+      "Patch requires coordinated maintenance window; partner integrations mid-cutover.",
+    technicalContext:
+      "Three edge gateways affected (edge-gw-01, 02, 03); exploit observed in the wild.",
+    frameworkTags: ["CISA KEV", "NIST 800-53 SI-2", "NIST 800-53 RA-5"],
+    sourceReferences: [
+      { label: "Tenable scan TENABLE-99182", system: "Tenable", externalId: "TENABLE-99182" },
+      { label: "CVE-2026-1455", system: "CISA KEV" },
+    ],
+    vulnerabilityContext: {
+      source: "tenable",
+      findingId: "TENABLE-99182",
+      severity: "critical",
+      affectedAsset: "edge-gw-{01,02,03}",
+      repositoryOrApplication: "edge-gateway",
+      cve: "CVE-2026-1455",
+      businessImpact:
+        "Partner integrations require uninterrupted gateway connectivity through May 22.",
+      technicalImpact:
+        "Exploit observed in the wild; IPS signature deployed; geo-fenced ingress applied.",
+      remediationPlan:
+        "Patch in the May 29 maintenance window; revoke acceptance once all three gateways are upgraded.",
+      requestedDecision: "accept",
+      releaseBlocking: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Tenable",
+        action: "ingested",
+        detail: "Critical CVE finding routed to Vulnerability Accept.",
+        occurredAt: "2026-05-12T16:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-006",
+    module: "vulnerability-accept",
+    title: "Pen test finding requires remediation plan",
+    description:
+      "Q2 pen test identified a privilege escalation path in the internal admin portal. Remediation plan must be filed before the finding can be dispositioned.",
+    sourceSystem: "Pen test report",
+    sourceType: "vuln.pen_test",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Dana Okafor",
+    department: "Application Security",
+    dueDate: "2026-05-21",
+    expirationDate: "2026-06-21",
+    reviewDate: "2026-05-21",
+    compensatingControls:
+      "Role check tightened at the affected endpoint; manual review of recent privileged actions in the portal.",
+    evidenceSummary:
+      "Pen test report Q2-07, recreate steps, log replay of affected user sessions.",
+    businessJustification:
+      "Internal admin portal is the runbook execution surface; remediation must coordinate with on-call rotation.",
+    technicalContext:
+      "Mis-scoped role check exposed a privilege escalation path; reproducible in staging.",
+    frameworkTags: ["NIST 800-53 RA-5", "NIST SSDF PW.5", "OWASP ASVS V4"],
+    sourceReferences: [
+      { label: "Pen test PENTEST-2026-Q2-07", system: "Pen test", externalId: "PENTEST-2026-Q2-07" },
+      { label: "Recreate runbook", system: "Confluence" },
+    ],
+    vulnerabilityContext: {
+      source: "pen-test",
+      findingId: "PENTEST-2026-Q2-07",
+      severity: "high",
+      affectedAsset: "internal-admin-portal / role middleware",
+      repositoryOrApplication: "internal-admin-portal",
+      cwe: "CWE-285",
+      businessImpact:
+        "Internal admin portal is the on-call runbook execution surface; remediation must coordinate with on-call.",
+      technicalImpact:
+        "Privilege escalation reproducible in staging; production paths gated by approved sessions.",
+      remediationPlan:
+        "Centralize role authorization in middleware; add property-based tests; ship by June 21.",
+      requestedDecision: "remediate",
+      releaseBlocking: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Pen test",
+        action: "filed",
+        detail: "Q2 pen test finding filed; remediation plan owner pending.",
+        occurredAt: "2026-05-12T22:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-007",
+    module: "vulnerability-accept",
+    title: "Container vulnerability accepted until next release",
+    description:
+      "Snyk Container flagged a critical CVE in the checkout-service base image. Engineering proposes acceptance until the next release cuts in two weeks.",
+    sourceSystem: "Snyk Container",
+    sourceType: "vuln.snyk_container",
+    riskLevel: "critical",
+    status: "pending",
+    owner: "Jordan Pak",
+    department: "Checkout Engineering",
+    dueDate: "2026-05-22",
+    expirationDate: "2026-05-27",
+    reviewDate: "2026-05-22",
+    compensatingControls:
+      "Runtime policy denies privileged container syscalls; WAF rule deployed; canary at 5% traffic.",
+    evidenceSummary:
+      "Snyk Container SNYK-CTR-44120, base image diff, runtime policy snapshot.",
+    businessJustification:
+      "Disclosure update with a fixed effective date forces the next release to ship on schedule.",
+    technicalContext:
+      "Critical CVE in base image; reachable only after runtime exploit chain; mitigated by runtime policy.",
+    frameworkTags: ["NIST 800-53 SI-2", "NIST SSDF PW.7", "CIS Containers"],
+    sourceReferences: [
+      { label: "Snyk Container SNYK-CTR-44120", system: "Snyk", externalId: "SNYK-CTR-44120" },
+      { label: "CVE-2026-30912", system: "NVD" },
+    ],
+    vulnerabilityContext: {
+      source: "snyk",
+      findingId: "SNYK-CTR-44120",
+      severity: "critical",
+      affectedAsset: "checkout-service / container image",
+      repositoryOrApplication: "checkout-service",
+      cve: "CVE-2026-30912",
+      businessImpact:
+        "Regulatory disclosure update with fixed effective date depends on this release.",
+      technicalImpact:
+        "Exploit chain requires runtime privilege; mitigated by container runtime policy.",
+      remediationPlan:
+        "Rebuild on hardened base image in the May 27 release; revoke acceptance afterwards.",
+      requestedDecision: "accept",
+      releaseBlocking: true,
+    },
+    auditTimeline: [
+      {
+        actor: "Snyk Container",
+        action: "ingested",
+        detail: "Critical container image finding raised against checkout-service.",
+        occurredAt: "2026-05-12T21:11:00Z",
+      },
+    ],
+  },
+  {
+    id: "ra-vul-008",
+    module: "vulnerability-accept",
+    title: "High-severity SCA finding requires business owner approval",
+    description:
+      "Snyk SCA raised a high-severity transitive dependency finding on the analytics platform. Business owner sign-off is required before exception can be issued.",
+    sourceSystem: "Snyk SCA",
+    sourceType: "vuln.snyk_sca",
+    riskLevel: "high",
+    status: "pending",
+    owner: "Alex Greene",
+    department: "Office of the CISO",
+    dueDate: "2026-05-23",
+    expirationDate: "2026-08-22",
+    reviewDate: "2026-08-22",
+    compensatingControls:
+      "Affected dependency wrapped in defensive shim; CI rebuild scheduled; alerting tightened on the analytics service.",
+    evidenceSummary:
+      "Snyk SCA SNYK-SCA-22019, dependency graph, prior business-owner approval precedent.",
+    businessJustification:
+      "Analytics platform powers the executive risk register; replacing the dependency in mid-quarter would disrupt reporting.",
+    technicalContext:
+      "High-severity SCA finding; vulnerable path used only by a defensive shim; replacement scheduled.",
+    frameworkTags: ["NIST 800-53 RA-5", "NIST SSDF PW.6", "SOC 2 CC7.1"],
+    sourceReferences: [
+      { label: "Snyk SCA SNYK-SCA-22019", system: "Snyk", externalId: "SNYK-SCA-22019" },
+      { label: "CVE-2026-15500", system: "NVD" },
+    ],
+    vulnerabilityContext: {
+      source: "snyk",
+      findingId: "SNYK-SCA-22019",
+      severity: "high",
+      affectedAsset: "analytics-platform / data-warehouse-client",
+      repositoryOrApplication: "analytics-platform",
+      cve: "CVE-2026-15500",
+      cwe: "CWE-78",
+      businessImpact:
+        "Analytics platform powers the executive risk register; mid-quarter swap risks reporting outage.",
+      technicalImpact:
+        "Vulnerable path only reached via defensive shim; full replacement scheduled.",
+      remediationPlan:
+        "Replace transitive dependency in the next analytics platform release window in August.",
+      requestedDecision: "accept",
+      releaseBlocking: false,
+    },
+    auditTimeline: [
+      {
+        actor: "Snyk SCA",
+        action: "ingested",
+        detail: "High-severity SCA finding raised; business owner approval pending.",
+        occurredAt: "2026-05-12T23:30:00Z",
       },
     ],
   },

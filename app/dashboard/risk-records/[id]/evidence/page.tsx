@@ -110,6 +110,49 @@ export default function EvidencePacketPage({ params }: { params: { id: string } 
           </Card>
         ) : null}
 
+        {summary.vulnerabilityFields ? (
+          <Card>
+            <CardHeader>
+              <Badge tone="info">Vulnerability Accept</Badge>
+              <CardTitle className="mt-2">Finding context</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                <Fact label="Scanner source" value={summary.vulnerabilityFields.scannerSource} />
+                <Fact label="Finding ID" value={summary.vulnerabilityFields.findingId} />
+                <Fact label="Severity" value={summary.vulnerabilityFields.severity} />
+                <Fact label="Affected asset" value={summary.vulnerabilityFields.affectedAsset} />
+                <Fact
+                  label="Repository or application"
+                  value={summary.vulnerabilityFields.repositoryOrApplication}
+                />
+                <Fact label="CVE" value={summary.vulnerabilityFields.cve} />
+                <Fact label="CWE" value={summary.vulnerabilityFields.cwe} />
+                <Fact
+                  label="Requested decision"
+                  value={summary.vulnerabilityFields.requestedDecision}
+                />
+                <Fact
+                  label="Release-blocking"
+                  value={summary.vulnerabilityFields.releaseBlocking ? "Yes" : "No"}
+                />
+                <Fact label="Review date" value={summary.reviewDate} />
+              </dl>
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                <Fact label="Business impact" value={summary.vulnerabilityFields.businessImpact} />
+                <Fact
+                  label="Technical impact"
+                  value={summary.vulnerabilityFields.technicalImpact}
+                />
+                <Fact
+                  label="Remediation plan"
+                  value={summary.vulnerabilityFields.remediationPlan}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="grid gap-6 lg:grid-cols-2">
           <PacketCard title="Compensating controls" body={record.compensatingControls} />
           <PacketCard title="Business justification" body={record.businessJustification} />

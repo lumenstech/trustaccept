@@ -53,7 +53,7 @@ const CATEGORIES: Category[] = [
   },
   {
     name: "Vulnerability & Posture",
-    note: "Source of vulnerability and exposure findings.",
+    note: "Source of vulnerability, code, container, cloud, and pen test findings.",
     items: [
       {
         name: "Fortify",
@@ -62,18 +62,38 @@ const CATEGORIES: Category[] = [
       },
       {
         name: "Snyk",
-        fit: "Works with — code, dependency, container findings.",
+        fit: "Works with — open source, dependency, container, and IaC findings.",
         recipe: "Recipe available: project webhook → Risk Record.",
       },
       {
+        name: "GitHub Advanced Security",
+        fit: "Works with — code scanning, secret scanning, and Dependabot alerts.",
+        recipe: "Connect using webhook into Vulnerability Accept.",
+      },
+      {
         name: "Wiz",
-        fit: "Works with — cloud and KEV-matched exposures.",
-        recipe: "Connect using webhook into KEV Exposure Review.",
+        fit: "Works with — cloud posture, exposures, and KEV matches.",
+        recipe: "Connect using webhook into Vulnerability Accept.",
       },
       {
         name: "Tenable",
         fit: "Works with — host scans and CISA KEV matches.",
-        recipe: "Recipe available: T.io export → KEV Exposure Review.",
+        recipe: "Recipe available: T.io export → Risk Record.",
+      },
+      {
+        name: "Qualys",
+        fit: "Works with — host and web application findings.",
+        recipe: "Connect using webhook into Vulnerability Accept.",
+      },
+      {
+        name: "Rapid7",
+        fit: "Works with — InsightVM findings and remediation projects.",
+        recipe: "Connect using webhook into Vulnerability Accept.",
+      },
+      {
+        name: "Pen test reports",
+        fit: "Works with — manual findings, recreate runbooks, and evidence packets.",
+        recipe: "Approval record layer around your assessment vendor workflow.",
       },
     ],
   },

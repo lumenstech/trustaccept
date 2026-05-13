@@ -33,6 +33,81 @@ support powered by SequenceNow.
 - Seed data for all seven modules
 - Mock authentication (production auth is delivered via SequenceNow)
 
+## Vulnerability Accept (second deep module)
+
+Vulnerability Accept converts Fortify, SAST, SCA, GitHub, cloud scanner, and
+penetration test findings into accept, reject, or remediate decisions with
+owners, expiration dates, compensating controls, and evidence packets.
+
+TrustAccept does not replace Fortify, Snyk, Wiz, Tenable, GitHub, Jira,
+ServiceNow, or cloud scanners. TrustAccept creates the approval, acceptance,
+and evidence layer around the high-risk vulnerability decisions those systems
+expose.
+
+### Routes
+
+- `/vulnerability-acceptance` — enhanced marketing page (problem statement, scanner clarification, eight example decision cards, four-step workflow timeline, evidence packet preview, source-system cards, primary + secondary CTAs).
+- `/dashboard/vulnerability-acceptance` — Vulnerability Accept command center. Eight summary cards (pending, critical, expiring exceptions, remediation required, scanner imports, pen test findings, release-blocking findings, accepted risks). Records table with finding ID, asset, CVE/CWE, severity, status, owner, expiration. Buttons: **New Vulnerability Record** and **View Scanner Findings**.
+- `/dashboard/vulnerability-acceptance/new` — Vulnerability Accept-specific intake form (finding source, finding title, severity, affected asset, repository/application, CVE, CWE, scanner finding ID, business impact, technical impact, remediation plan, requested decision, owner, expiration date, review date, compensating controls, evidence summary, release-blocking flag). POSTs to `/api/risk-records` with `module = vulnerability-accept` and a `vulnerabilityContext` payload.
+- `/dashboard/vulnerability-acceptance/findings` — mock scanner finding feed (Fortify SQL injection, Snyk dependency, GHAS secret scanning, Wiz exposure, Tenable critical CVE, pen test privilege escalation, container critical CVE, SCA finding). Each card has a **Create Risk Record** button that prefills the intake form via query params.
+
+### Module-aware decision labels
+
+| Vulnerability Accept record type | Accept | Reject | Remediate |
+| --- | --- | --- | --- |
+| Default Vulnerability Accept | Accept Finding Risk | Reject Acceptance | Require Remediation |
+| Release-blocking finding | Accept for Release | Block Release | Require Fix |
+
+The resolver (`getApprovalLabels` in `lib/access.ts`) now also branches on
+Vulnerability Accept records and, when `vulnerabilityContext.releaseBlocking`
+is true, swaps to the release-blocking label set. Access Accept labels are
+unchanged.
+
+### Demo workflow
+
+```
+1. Scanner finding detected by Fortify / Snyk / GitHub Advanced Security / Wiz / Tenable / Qualys / Rapid7 / pen test
+2. TrustAccept creates a Vulnerability Accept risk record
+3. Owner accepts, rejects, or requires remediation via the hosted approval page
+4. Evidence packet created in the Evidence Desk
+5. Ticket or release workflow updated downstream
+```
+
+Inbound scanner event payload (also returned by `/api/demo/risk-flow` and
+shown on `/docs`):
+
+```json
+{
+  "source": "fortify",
+  "event_type": "critical_finding_exception_request",
+  "finding_id": "FORTIFY-2026-1182",
+  "application": "customer-portal",
+  "severity": "critical",
+  "cwe": "CWE-89",
+  "requested_decision": "accept_until_next_release",
+  "business_justification": "Emergency production release with compensating WAF rule"
+}
+```
+
+### Verification commands
+
+```bash
+npm install
+npm run prisma:generate
+npm run typecheck
+npm test
+npm run build
+```
+
+End-to-end live verification (May 2026): identity event-style POST →
+Vulnerability Accept record with `vulnerabilityContext.releaseBlocking: true`
+→ hosted approval page renders `Accept for Release` / `Block Release` /
+`Require Fix` → PATCH decision sets status `accepted` and appends an
+audit log entry → evidence packet card renders the **Finding context**
+block → `/api/evidence-packets/<id>/export.pdf` returns a real
+`application/pdf` whose body embeds the audit log entries
+`risk_record.created`, `decision.accepted`, and `evidence_packet.generated`.
+
 ## Access Accept (first deep module)
 
 Access Accept is the first TrustAccept module built out as a deep, end-to-end
@@ -340,6 +415,8 @@ module:
 | AI Action Gate | Approve Action | Reject Action | Require Review |
 | Access Accept (default) | Approve Access | Reject Access | Require More Evidence |
 | Access Accept (suspicious login) | Accept Login Risk | Reject / Block | Escalate Login |
+| Vulnerability Accept (default) | Accept Finding Risk | Reject Acceptance | Require Remediation |
+| Vulnerability Accept (release-blocking) | Accept for Release | Block Release | Require Fix |
 | Secure Release Gate | Approve Release | Block Release | Require Remediation |
 | Device Accept | Approve Device | Reject Device | Require More Evidence |
 | Evidence Desk | Mark Reviewed | Request Update | Export Evidence |

@@ -5,6 +5,7 @@ import {
 } from "@/lib/access";
 import { RISK_AREAS } from "@/lib/leads";
 import { MODULES } from "@/lib/modules";
+import { VULNERABILITY_SOURCES } from "@/lib/vulnerability";
 
 const moduleKeys = MODULES.map((m) => m.key) as [string, ...string[]];
 const riskAreaValues = RISK_AREAS.map((r) => r.value) as [string, ...string[]];
@@ -16,6 +17,26 @@ const identityProviderValues = IDENTITY_PROVIDERS.map((p) => p.value) as [
   string,
   ...string[],
 ];
+const vulnerabilitySourceValues = VULNERABILITY_SOURCES.map((s) => s.value) as [
+  string,
+  ...string[],
+];
+
+export const VulnerabilityContextInput = z.object({
+  source: z.enum(vulnerabilitySourceValues),
+  findingId: z.string().min(1).max(160),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  affectedAsset: z.string().min(1).max(200),
+  repositoryOrApplication: z.string().min(1).max(200),
+  cve: z.string().max(80).optional(),
+  cwe: z.string().max(80).optional(),
+  businessImpact: z.string().min(1).max(4000),
+  technicalImpact: z.string().min(1).max(4000),
+  remediationPlan: z.string().min(1).max(4000),
+  requestedDecision: z.enum(["accept", "reject", "remediate"]),
+  releaseBlocking: z.boolean().optional(),
+});
+export type VulnerabilityContextInputType = z.infer<typeof VulnerabilityContextInput>;
 
 export const AccessContextInput = z.object({
   requestType: z.enum(accessRequestTypeValues),
@@ -62,6 +83,7 @@ export const RiskRecordCreateInput = z.object({
   frameworkTags: z.array(z.string().min(1).max(120)).max(20).default([]),
   sourceReferences: z.array(sourceReferenceSchema).max(20).default([]),
   accessContext: AccessContextInput.optional(),
+  vulnerabilityContext: VulnerabilityContextInput.optional(),
 });
 export type RiskRecordCreateInputType = z.infer<typeof RiskRecordCreateInput>;
 

@@ -28,10 +28,31 @@ const ACCESS_ACCEPT_DEMO_FLOW = [
   "Callback or ticket update sent to the source identity / ITSM system",
 ];
 
+const VULNERABILITY_ACCEPT_EXAMPLE_EVENT = {
+  source: "fortify",
+  event_type: "critical_finding_exception_request",
+  finding_id: "FORTIFY-2026-1182",
+  application: "customer-portal",
+  severity: "critical",
+  cwe: "CWE-89",
+  requested_decision: "accept_until_next_release",
+  business_justification:
+    "Emergency production release with compensating WAF rule",
+};
+
+const VULNERABILITY_ACCEPT_DEMO_FLOW = [
+  "Scanner finding detected by Fortify / Snyk / GitHub Advanced Security / Wiz / Tenable / Qualys / Rapid7 / pen test",
+  "TrustAccept creates a Vulnerability Accept risk record",
+  "Owner accepts, rejects, or requires remediation via the hosted approval page",
+  "Evidence packet created in the Evidence Desk",
+  "Ticket or release workflow updated downstream",
+];
+
 export async function GET() {
   try {
     const user = requireDashboardAccess();
     const accessRecords = listRiskRecordsByModule(user, "access-accept");
+    const vulnerabilityRecords = listRiskRecordsByModule(user, "vulnerability-accept");
     return NextResponse.json({
       organizationId: user.organizationId,
       counts: {
@@ -41,6 +62,11 @@ export async function GET() {
         auditEvents: listAuditLogsForOrganization(user.organizationId).length,
         accessAccept: accessRecords.length,
         accessAcceptPending: accessRecords.filter((r) => r.status === "pending").length,
+        vulnerabilityAccept: vulnerabilityRecords.length,
+        vulnerabilityAcceptPending: vulnerabilityRecords.filter((r) => r.status === "pending").length,
+        vulnerabilityAcceptReleaseBlocking: vulnerabilityRecords.filter(
+          (r) => r.vulnerabilityContext?.releaseBlocking,
+        ).length,
       },
       pending: listPendingRiskRecords(user).map((r) => ({
         id: r.id,
@@ -54,6 +80,11 @@ export async function GET() {
         event: ACCESS_ACCEPT_EXAMPLE_EVENT,
         flow: ACCESS_ACCEPT_DEMO_FLOW,
         sampleRecordId: accessRecords[0]?.id ?? null,
+      },
+      vulnerabilityAcceptExample: {
+        event: VULNERABILITY_ACCEPT_EXAMPLE_EVENT,
+        flow: VULNERABILITY_ACCEPT_DEMO_FLOW,
+        sampleRecordId: vulnerabilityRecords[0]?.id ?? null,
       },
     });
   } catch (err) {

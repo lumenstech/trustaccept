@@ -72,6 +72,25 @@ const ACCESS_FLOW = [
   "Callback or ticket update sent to the source identity / ITSM system",
 ];
 
+const VULNERABILITY_EVENT_JSON = `{
+  "source": "fortify",
+  "event_type": "critical_finding_exception_request",
+  "finding_id": "FORTIFY-2026-1182",
+  "application": "customer-portal",
+  "severity": "critical",
+  "cwe": "CWE-89",
+  "requested_decision": "accept_until_next_release",
+  "business_justification": "Emergency production release with compensating WAF rule"
+}`;
+
+const VULNERABILITY_FLOW = [
+  "Scanner finding detected by Fortify / Snyk / GitHub Advanced Security / Wiz / Tenable / Qualys / Rapid7 / pen test",
+  "TrustAccept creates a Vulnerability Accept risk record",
+  "Owner accepts, rejects, or requires remediation via the hosted approval page",
+  "Evidence packet created in the Evidence Desk",
+  "Ticket or release workflow updated downstream",
+];
+
 export default function Page() {
   return (
     <div>
@@ -146,6 +165,52 @@ export default function Page() {
                 </Link>
                 <Link href="/approve/ra-acc-001" className="text-sm text-primary">
                   See a live Access Accept decision →
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </Section>
+
+      <Section>
+        <SectionHeader
+          eyebrow="Vulnerability Accept API demo"
+          title="Scanner finding → defensible decision"
+          subtitle="A Vulnerability Accept record is the same RiskRecord shape with module = vulnerability-accept and a vulnerabilityContext block describing the finding."
+        />
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+          <Card>
+            <CardContent className="overflow-x-auto p-6">
+              <p className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">
+                Inbound scanner event
+              </p>
+              <pre className="whitespace-pre-wrap font-mono text-xs text-muted-foreground">
+                {VULNERABILITY_EVENT_JSON}
+              </pre>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6 text-sm">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                Demo flow
+              </p>
+              <ol className="mt-3 space-y-2 text-muted-foreground">
+                {VULNERABILITY_FLOW.map((step, idx) => (
+                  <li key={step} className="flex gap-3">
+                    <span className="text-primary">{idx + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Link
+                  href="/dashboard/vulnerability-acceptance/findings"
+                  className="text-sm text-primary"
+                >
+                  Open the demo scanner feed →
+                </Link>
+                <Link href="/approve/ra-vul-001" className="text-sm text-primary">
+                  See a live Vulnerability Accept decision →
                 </Link>
               </div>
             </CardContent>

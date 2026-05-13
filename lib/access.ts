@@ -104,21 +104,40 @@ const SUSPICIOUS_LOGIN_LABELS: ApprovalLabels = {
   remediate: "Escalate Login",
 };
 
+const DEFAULT_VULNERABILITY_LABELS: ApprovalLabels = {
+  accept: "Accept Finding Risk",
+  reject: "Reject Acceptance",
+  remediate: "Require Remediation",
+};
+
+const RELEASE_BLOCKING_VULNERABILITY_LABELS: ApprovalLabels = {
+  accept: "Accept for Release",
+  reject: "Block Release",
+  remediate: "Require Fix",
+};
+
 /**
- * Resolve approval labels for a record. Access Accept records swap to
- * access-specific labels; suspicious login swaps further. Every other
- * module falls back to its declared module labels.
+ * Resolve approval labels for a record. Access Accept and Vulnerability
+ * Accept swap to module-specific labels; suspicious login and
+ * release-blocking findings swap further. Every other module falls
+ * back to its declared module labels.
  */
 export function getApprovalLabels(record: RiskRecord): ApprovalLabels {
-  if (record.module !== "access-accept") {
-    const m = MODULES.find((meta) => meta.key === record.module);
-    if (!m) throw new Error(`Unknown module: ${record.module}`);
-    return { accept: m.acceptLabel, reject: m.rejectLabel, remediate: m.remediateLabel };
+  if (record.module === "access-accept") {
+    if (record.accessContext?.requestType === "suspicious-login") {
+      return SUSPICIOUS_LOGIN_LABELS;
+    }
+    return DEFAULT_ACCESS_LABELS;
   }
-  if (record.accessContext?.requestType === "suspicious-login") {
-    return SUSPICIOUS_LOGIN_LABELS;
+  if (record.module === "vulnerability-accept") {
+    if (record.vulnerabilityContext?.releaseBlocking) {
+      return RELEASE_BLOCKING_VULNERABILITY_LABELS;
+    }
+    return DEFAULT_VULNERABILITY_LABELS;
   }
-  return DEFAULT_ACCESS_LABELS;
+  const m = MODULES.find((meta) => meta.key === record.module);
+  if (!m) throw new Error(`Unknown module: ${record.module}`);
+  return { accept: m.acceptLabel, reject: m.rejectLabel, remediate: m.remediateLabel };
 }
 
 export function getAccessRequestMeta(

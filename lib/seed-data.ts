@@ -1,6 +1,36 @@
-import type { RiskRecord } from "./types";
+import type { RiskLevel, RiskRecord } from "./types";
 
-export const SEED_RECORDS: RiskRecord[] = [
+export const DEMO_ORGANIZATION_ID = "demo-org";
+export const DEMO_USER_ID = "demo-user";
+
+export function deriveRiskScore(level: RiskLevel): number {
+  switch (level) {
+    case "low":
+      return 25;
+    case "medium":
+      return 50;
+    case "high":
+      return 75;
+    case "critical":
+      return 95;
+  }
+}
+
+const SEED_TIMESTAMP = "2026-05-13T08:00:00Z";
+
+function withDefaults(record: RiskRecord): RiskRecord {
+  return {
+    organizationId: DEMO_ORGANIZATION_ID,
+    riskScore: deriveRiskScore(record.riskLevel),
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+    createdById: DEMO_USER_ID,
+    updatedById: DEMO_USER_ID,
+    ...record,
+  };
+}
+
+const RAW_RECORDS: RiskRecord[] = [
   {
     id: "ra-ai-001",
     module: "ai-action-gate",
@@ -272,6 +302,8 @@ export const SEED_RECORDS: RiskRecord[] = [
     ],
   },
 ];
+
+export const SEED_RECORDS: RiskRecord[] = RAW_RECORDS.map(withDefaults);
 
 export function findRecord(id: string) {
   return SEED_RECORDS.find((r) => r.id === id);

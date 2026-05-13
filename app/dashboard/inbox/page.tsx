@@ -1,9 +1,13 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { InboxCard } from "@/components/risk/inbox-card";
-import { SEED_RECORDS } from "@/lib/seed-data";
+import { requireDashboardAccess } from "@/src/server/auth";
+import { listPendingRiskRecords } from "@/src/server/riskRecords";
+
+export const dynamic = "force-dynamic";
 
 export default function InboxPage() {
-  const pending = SEED_RECORDS.filter((r) => r.status === "pending");
+  const user = requireDashboardAccess();
+  const pending = listPendingRiskRecords(user);
 
   return (
     <>

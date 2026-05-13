@@ -10,68 +10,23 @@ import type { RiskRecord } from "@/lib/types";
 
 export function EvidenceActions({
   record,
-  summary,
 }: {
   record: RiskRecord;
   summary: EvidencePacketSummary;
 }) {
   const [sent, setSent] = useState(false);
 
-  function downloadPdf() {
-    const lines = [
-      `TrustAccept · Evidence Packet`,
-      `==============================`,
-      ``,
-      `Decision ID: ${summary.decisionId}`,
-      `Module:      ${summary.module}`,
-      `Risk level:  ${summary.riskLevel}`,
-      `Source:      ${summary.sourceSystem}`,
-      `Owner:       ${summary.owner}`,
-      `Expires:     ${summary.expirationDate}`,
-      `Outcome:     ${summary.outcome}`,
-      ``,
-      `Frameworks:`,
-      ...summary.frameworkTags.map((tag) => `  - ${tag}`),
-      ``,
-      `Executive summary`,
-      `-----------------`,
-      summary.executiveSummary,
-      ``,
-      `Compensating controls`,
-      `---------------------`,
-      record.compensatingControls,
-      ``,
-      `Evidence summary`,
-      `----------------`,
-      record.evidenceSummary,
-      ``,
-      `Audit timeline`,
-      `--------------`,
-      ...record.auditTimeline.map(
-        (e) => `  [${e.occurredAt}] ${e.actor} ${e.action} — ${e.detail}`,
-      ),
-      ``,
-      `NIST-aligned · CISA KEV-aware · designed to support audit evidence`,
-      `TrustAccept is a Lumens Technology product. Approval delivery powered by SequenceNow.`,
-    ].join("\n");
-
-    const blob = new Blob([lines], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${summary.decisionId}-evidence.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <div className="flex flex-wrap gap-3">
-      <Button onClick={downloadPdf}>
-        <Download className="h-4 w-4" />
-        Download Evidence PDF
-      </Button>
+      <a
+        href={`/api/evidence-packets/${record.id}/export.pdf`}
+        download={`trustaccept-evidence-${record.id}.pdf`}
+      >
+        <Button>
+          <Download className="h-4 w-4" />
+          Download Evidence PDF
+        </Button>
+      </a>
       <Button
         variant={sent ? "subtle" : "outline"}
         onClick={() => setSent(true)}

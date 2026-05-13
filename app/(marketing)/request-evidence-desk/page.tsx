@@ -3,6 +3,7 @@ import { LeadCapturePage } from "@/components/site/lead-capture-page";
 export default function Page() {
   return (
     <LeadCapturePage
+      formType="request-evidence-desk"
       eyebrow="Managed Evidence Desk"
       title="Let us run your Evidence Desk."
       subtitle="We operate the review queue, track expirations, compile the monthly executive register, and produce audit-ready exports — so your team doesn't have to."

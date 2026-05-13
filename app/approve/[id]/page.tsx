@@ -15,10 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/site/logo";
 import { DecisionActions } from "@/components/risk/decision-actions";
 import { getModule } from "@/lib/modules";
-import { findRecord } from "@/lib/seed-data";
+import { getRiskRecordPublic } from "@/src/server/riskRecords";
+
+export const dynamic = "force-dynamic";
 
 export default function ApprovePage({ params }: { params: { id: string } }) {
-  const record = findRecord(params.id);
+  const record = getRiskRecordPublic(params.id);
   if (!record) notFound();
 
   const module = getModule(record.module);

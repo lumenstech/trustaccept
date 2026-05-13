@@ -6,37 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/form";
+import { RISK_AREAS, URGENCY_OPTIONS } from "@/lib/leads";
+import type { LeadFormType } from "@/lib/types";
 
-export const RISK_AREAS = [
-  { value: "ai-agent-action", label: "AI agent action" },
-  { value: "identity-access-event", label: "Identity / access event" },
-  { value: "vulnerability-exception", label: "Vulnerability exception" },
-  { value: "cisa-kev-exposure", label: "CISA KEV exposure" },
-  { value: "secure-release", label: "Secure release" },
-  { value: "device-access", label: "Device access" },
-  { value: "evidence-desk", label: "Evidence Desk" },
-  { value: "other", label: "Other" },
-] as const;
-
-const URGENCY_OPTIONS = [
-  { value: "48-hours", label: "Within 48 hours" },
-  { value: "this-week", label: "This week" },
-  { value: "this-month", label: "This month" },
-  { value: "exploring", label: "Exploring" },
-] as const;
+export { RISK_AREAS };
 
 interface LeadCaptureFormProps {
+  formType: LeadFormType;
   submitLabel?: string;
   successTitle?: string;
   defaultRiskArea?: string;
 }
 
 export function LeadCaptureForm({
+  formType,
   submitLabel = "Submit request",
   successTitle = "Request recorded",
   defaultRiskArea,
 }: LeadCaptureFormProps) {
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState({
     name: "",
     company: "",
@@ -51,9 +41,27 @@ export function LeadCaptureForm({
     setState((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitted(true);
+    setError(null);
+    setPending(true);
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formType, ...state }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error ?? "Submission failed");
+      }
+      const body = (await response.json()) as { lead: { id: string } };
+      setSubmitted({ id: body.lead.id });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Submission failed");
+    } finally {
+      setPending(false);
+    }
   }
 
   if (submitted) {
@@ -69,11 +77,11 @@ export function LeadCaptureForm({
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
-            A Lumens Technology / TrustAccept specialist will follow up. Approval
-            delivery and identity workflow support powered by SequenceNow.
+            Your request has been recorded. A Lumens Technology / TrustAccept
+            specialist will follow up.
           </p>
           <div className="rounded-md border border-border bg-card/40 p-4 font-mono text-xs">
-            Reference · {`req-${Math.random().toString(36).slice(2, 8)}`}
+            Reference · {submitted.id}
           </div>
         </CardContent>
       </Card>
@@ -161,10 +169,11 @@ export function LeadCaptureForm({
               onChange={(e) => update("description", e.target.value)}
             />
           </FieldGroup>
-          <Button type="submit" size="lg">
-            {submitLabel}
+          <Button type="submit" size="lg" disabled={pending}>
+            {pending ? "Submitting…" : submitLabel}
             <ArrowRight className="h-4 w-4" />
           </Button>
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
           <p className="text-xs text-muted-foreground">
             By submitting, you authorize Lumens Technology to contact you about
             TrustAccept service offers. Approval delivery powered by SequenceNow.

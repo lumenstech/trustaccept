@@ -41,30 +41,81 @@ enum Decision {
   REMEDIATE
 }
 
-model User {
+enum Role {
+  OWNER
+  ADMIN
+  APPROVER
+  VIEWER
+}
+
+enum AuditEventType {
+  RISK_RECORD_CREATED
+  RISK_RECORD_UPDATED
+  DECISION_ACCEPTED
+  DECISION_REJECTED
+  DECISION_REMEDIATION_REQUIRED
+  EVIDENCE_PACKET_GENERATED
+  APPROVAL_PAGE_VIEWED
+  LEAD_FORM_SUBMITTED
+}
+
+enum LeadFormType {
+  BOOK_RISK_REVIEW
+  START_PILOT
+  REQUEST_EVIDENCE_DESK
+  CONTACT
+}
+
+enum LeadStatus {
+  NEW
+  IN_REVIEW
+  CONTACTED
+  CLOSED
+}
+
+model Organization {
   id        String   @id @default(cuid())
-  email     String   @unique
   name      String
-  role      String   @default("approver")
   createdAt DateTime @default(now())
 
-  ownedRecords    RiskRecord[] @relation("RecordOwner")
-  decidedRecords  RiskRecord[] @relation("RecordDecider")
-  timelineEntries AuditTimelineEntry[]
+  users          User[]
+  riskRecords    RiskRecord[]
+  auditLogs      AuditLog[]
+  evidencePackets EvidencePacket[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  role           Role     @default(VIEWER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+
+  ownedRecords   RiskRecord[] @relation("RecordOwner")
+  decidedRecords RiskRecord[] @relation("RecordDecider")
+  createdRecords RiskRecord[] @relation("RecordCreatedBy")
+  updatedRecords RiskRecord[] @relation("RecordUpdatedBy")
+  auditLogs      AuditLog[]
 }
 
 model RiskRecord {
   id                    String         @id @default(cuid())
+  organizationId        String
+  organization          Organization   @relation(fields: [organizationId], references: [id])
   module                ProductModule
   title                 String
   description           String         @db.Text
   sourceSystem          String
   sourceType            String
   riskLevel             RiskLevel
+  riskScore             Int            @default(50)
   status                RiskStatus     @default(PENDING)
 
   ownerId               String?
   owner                 User?          @relation("RecordOwner", fields: [ownerId], references: [id])
+  ownerLabel            String
   department            String
 
   dueDate               DateTime?
@@ -74,7 +125,9 @@ model RiskRecord {
   decision              Decision?
   decisionById          String?
   decisionBy            User?          @relation("RecordDecider", fields: [decisionById], references: [id])
+  decisionByLabel       String?
   decisionAt            DateTime?
+  decisionNote          String?        @db.Text
 
   compensatingControls  String         @db.Text
   evidenceSummary       String         @db.Text
@@ -84,21 +137,65 @@ model RiskRecord {
   frameworkTags         String[]
   sourceReferences      Json
 
-  auditTimeline         AuditTimelineEntry[]
+  createdById           String?
+  createdBy             User?          @relation("RecordCreatedBy", fields: [createdById], references: [id])
+  updatedById           String?
+  updatedBy             User?          @relation("RecordUpdatedBy", fields: [updatedById], references: [id])
+
+  evidencePackets       EvidencePacket[]
+  auditLogs             AuditLog[]
 
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, module])
 }
 
-model AuditTimelineEntry {
-  id           String     @id @default(cuid())
-  recordId    String
-  record      RiskRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+/// Append-only by application convention. The service layer must only INSERT.
+model AuditLog {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  riskRecordId   String?
+  riskRecord     RiskRecord?    @relation(fields: [riskRecordId], references: [id], onDelete: Cascade)
+  eventType      AuditEventType
+  actorId        String?
+  actor          User?          @relation(fields: [actorId], references: [id])
+  actorName      String
+  previousStatus RiskStatus?
+  newStatus      RiskStatus?
+  metadata       Json
+  createdAt      DateTime       @default(now())
 
-  actorId     String?
-  actor       User?      @relation(fields: [actorId], references: [id])
-  actorLabel  String
-  action      String
-  detail      String     @db.Text
-  occurredAt  DateTime   @default(now())
+  @@index([organizationId, createdAt])
+  @@index([riskRecordId, createdAt])
+}
+
+model EvidencePacket {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  riskRecordId   String
+  riskRecord     RiskRecord   @relation(fields: [riskRecordId], references: [id], onDelete: Cascade)
+  summary        Json
+  generatedAt    DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([riskRecordId])
+}
+
+model Lead {
+  id          String       @id @default(cuid())
+  formType    LeadFormType
+  name        String
+  company     String
+  email       String
+  phone       String?
+  riskArea    String
+  urgency     String
+  description String       @db.Text
+  status      LeadStatus   @default(NEW)
+  createdAt   DateTime     @default(now())
 }

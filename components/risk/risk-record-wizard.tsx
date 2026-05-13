@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/form";
 import { MODULES } from "@/lib/modules";
-import type { ProductModuleKey, RiskLevel, SourceReference } from "@/lib/types";
+import type { ProductModuleKey, RiskLevel, RiskRecord, SourceReference } from "@/lib/types";
 
 interface WizardState {
   module: ProductModuleKey | "";
@@ -63,14 +63,12 @@ function emptyState(prefill: ProductModuleKey | null): WizardState {
   };
 }
 
-function generateRecordId(): string {
-  return `ra-draft-${Math.random().toString(36).slice(2, 7)}`;
-}
-
 export function RiskRecordWizard({ prefillModule }: { prefillModule: ProductModuleKey | null }) {
   const [step, setStep] = useState(prefillModule ? 2 : 1);
   const [state, setState] = useState<WizardState>(() => emptyState(prefillModule));
-  const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
+  const [submitted, setSubmitted] = useState<{ record: RiskRecord } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const selectedModule = useMemo(
     () => MODULES.find((m) => m.key === state.module),
@@ -126,12 +124,59 @@ export function RiskRecordWizard({ prefillModule }: { prefillModule: ProductModu
     }
   }
 
-  function handleSubmit() {
-    setSubmitted({ id: generateRecordId() });
+  async function handleSubmit() {
+    if (!state.module) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const payload = {
+        module: state.module,
+        title: state.title,
+        description: state.description,
+        sourceSystem: state.sourceSystem,
+        sourceType: state.sourceType,
+        riskLevel: state.riskLevel,
+        owner: state.owner,
+        department: state.department,
+        dueDate: state.dueDate || undefined,
+        expirationDate: state.expirationDate || undefined,
+        reviewDate: state.reviewDate || undefined,
+        compensatingControls: state.compensatingControls,
+        evidenceSummary: state.evidenceSummary,
+        businessJustification: state.businessJustification,
+        technicalContext: state.technicalContext,
+        frameworkTags: state.frameworkTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        sourceReferences: state.sourceReferences.filter(
+          (ref) => ref.label.length > 0 && ref.system.length > 0,
+        ),
+      };
+      const response = await fetch("/api/risk-records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        const message =
+          body?.issues?.[0]
+            ? `${body.issues[0].path}: ${body.issues[0].message}`
+            : body?.error ?? "Failed to create risk record";
+        throw new Error(message);
+      }
+      const body = (await response.json()) as { record: RiskRecord };
+      setSubmitted({ record: body.record });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create risk record");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {
-    return <WizardSuccess recordId={submitted.id} state={state} />;
+    return <WizardSuccess record={submitted.record} />;
   }
 
   return (
@@ -167,7 +212,7 @@ export function RiskRecordWizard({ prefillModule }: { prefillModule: ProductModu
           <Button
             variant="ghost"
             onClick={() => setStep((s) => Math.max(1, s - 1))}
-            disabled={step === 1}
+            disabled={step === 1 || submitting}
           >
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -178,9 +223,12 @@ export function RiskRecordWizard({ prefillModule }: { prefillModule: ProductModu
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit}>Create risk record</Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? "Creating…" : "Create risk record"}
+            </Button>
           )}
         </div>
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
       </div>
     </div>
   );
@@ -532,30 +580,33 @@ function StepReview({ state, module }: { state: WizardState; module: string | un
   );
 }
 
-function WizardSuccess({ recordId, state }: { recordId: string; state: WizardState }) {
+function WizardSuccess({ record }: { record: RiskRecord }) {
   return (
     <Card>
       <CardHeader>
         <Badge tone="success">
           <CheckCircle2 className="h-3.5 w-3.5" /> Record created
         </Badge>
-        <CardTitle className="mt-3">Risk record drafted</CardTitle>
+        <CardTitle className="mt-3">{record.title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm text-muted-foreground">
         <p>
-          {state.title || "Untitled risk decision"} is saved in this session. In
-          production, the record would be persisted to Postgres and SequenceNow would
-          deliver the approval link to the named approver.
+          The record is persisted to the TrustAccept workspace and an audit log entry
+          has been appended. In production, SequenceNow would deliver the hosted
+          approval link to the named approver.
         </p>
         <div className="rounded-md border border-border bg-card/40 p-4 font-mono text-xs">
-          Decision ID · <span className="text-foreground">{recordId}</span>
+          Decision ID · <span className="text-foreground">{record.id}</span>
         </div>
         <div className="flex flex-wrap gap-3 pt-2">
           <Link href="/dashboard/inbox">
-            <Button>Open Approval Inbox</Button>
+            <Button>View in Inbox</Button>
           </Link>
-          <Link href="/dashboard/risk-records">
-            <Button variant="outline">Back to Risk Records</Button>
+          <Link href={`/approve/${record.id}`}>
+            <Button variant="outline">View Risk Record</Button>
+          </Link>
+          <Link href={`/dashboard/risk-records/${record.id}/evidence`}>
+            <Button variant="outline">View Evidence Packet</Button>
           </Link>
           <Link href="/book-risk-review">
             <Button variant="subtle">Book a 48-Hour Review</Button>

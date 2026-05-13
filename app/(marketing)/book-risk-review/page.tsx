@@ -3,6 +3,7 @@ import { LeadCapturePage } from "@/components/site/lead-capture-page";
 export default function Page() {
   return (
     <LeadCapturePage
+      formType="book-risk-review"
       eyebrow="48-Hour Risk Acceptance Pack"
       title="Book a 48-Hour Risk Acceptance Review."
       subtitle="Three defensible risk records produced in two business days. Framework-informed compensating controls. Executive-ready cover summary."

@@ -1,8 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LeadCaptureForm } from "@/components/forms/lead-capture-form";
+import type { LeadFormType } from "@/lib/types";
 
 interface LeadCapturePageProps {
+  formType: LeadFormType;
   eyebrow: string;
   title: string;
   subtitle: string;
@@ -14,6 +16,7 @@ interface LeadCapturePageProps {
 }
 
 export function LeadCapturePage({
+  formType,
   eyebrow,
   title,
   subtitle,
@@ -69,6 +72,7 @@ export function LeadCapturePage({
             </Card>
           </div>
           <LeadCaptureForm
+            formType={formType}
             submitLabel={submitLabel}
             successTitle={successTitle}
             defaultRiskArea={defaultRiskArea}

@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RiskLevelBadge, StatusBadge, Badge } from "@/components/ui/badge";
 import { Section } from "@/components/ui/section";
-import { SEED_RECORDS } from "@/lib/seed-data";
+import { requireDashboardAccess } from "@/src/server/auth";
+import {
+  listExpiringRiskRecords,
+  listPendingRiskRecords,
+  listRiskRecordsByModule,
+  listRiskRecordsForOrganization,
+} from "@/src/server/riskRecords";
 import { getModule } from "@/lib/modules";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardOverview() {
-  const pending = SEED_RECORDS.filter((r) => r.status === "pending");
-  const critical = SEED_RECORDS.filter((r) => r.riskLevel === "critical");
-  const kev = SEED_RECORDS.filter((r) => r.module === "kev-exposure-review");
+  const user = requireDashboardAccess();
+  const all = listRiskRecordsForOrganization(user);
+  const pending = listPendingRiskRecords(user);
+  const critical = all.filter((r) => r.riskLevel === "critical");
+  const kev = listRiskRecordsByModule(user, "kev-exposure-review");
+  const expiring = listExpiringRiskRecords(user, 30);
 
   const stats = [
     {
@@ -33,8 +44,8 @@ export default function DashboardOverview() {
       tone: "info" as const,
     },
     {
-      label: "Evidence packets ready",
-      value: 1,
+      label: "Expiring in 30 days",
+      value: expiring.length,
       icon: CheckCircle2,
       tone: "success" as const,
     },
@@ -108,7 +119,7 @@ export default function DashboardOverview() {
                     </tr>
                   </thead>
                   <tbody>
-                    {SEED_RECORDS.map((record) => {
+                    {all.map((record) => {
                       const module = getModule(record.module);
                       return (
                         <tr key={record.id} className="border-b border-border last:border-0">

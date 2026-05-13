@@ -23,9 +23,9 @@ export const MODULES: ProductModuleMeta[] = [
     tagline: "Make break-glass, privileged, and just-in-time access decisions reviewable.",
     description:
       "Wrap your identity provider with an approval and evidence layer for privileged, emergency, and contractor access events.",
-    acceptLabel: "Accept Risk",
-    rejectLabel: "Reject Risk",
-    remediateLabel: "Require Remediation",
+    acceptLabel: "Approve Access",
+    rejectLabel: "Reject Access",
+    remediateLabel: "Require More Evidence",
   },
   {
     key: "vulnerability-accept",

@@ -4,9 +4,14 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MODULES } from "@/lib/modules";
-import { SEED_RECORDS } from "@/lib/seed-data";
+import { requireDashboardAccess } from "@/src/server/auth";
+import { listRiskRecordsForOrganization } from "@/src/server/riskRecords";
+
+export const dynamic = "force-dynamic";
 
 export default function ProductModulesPage() {
+  const user = requireDashboardAccess();
+  const records = listRiskRecordsForOrganization(user);
   return (
     <>
       <DashboardHeader
@@ -16,10 +21,10 @@ export default function ProductModulesPage() {
       />
       <div className="grid gap-4 px-8 py-8 lg:grid-cols-2">
         {MODULES.map((module) => {
-          const pending = SEED_RECORDS.filter(
+          const pending = records.filter(
             (r) => r.module === module.key && r.status === "pending",
           ).length;
-          const total = SEED_RECORDS.filter((r) => r.module === module.key).length;
+          const total = records.filter((r) => r.module === module.key).length;
           return (
             <Card key={module.key}>
               <CardHeader>

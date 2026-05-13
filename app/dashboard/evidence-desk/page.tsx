@@ -4,11 +4,16 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, RiskLevelBadge, StatusBadge } from "@/components/ui/badge";
-import { SEED_RECORDS } from "@/lib/seed-data";
+import { requireDashboardAccess } from "@/src/server/auth";
+import { listRiskRecordsForOrganization } from "@/src/server/riskRecords";
 import { getModule } from "@/lib/modules";
 
+export const dynamic = "force-dynamic";
+
 export default function EvidenceDeskPage() {
-  const monthly = SEED_RECORDS.find((r) => r.module === "evidence-desk");
+  const user = requireDashboardAccess();
+  const records = listRiskRecordsForOrganization(user);
+  const monthly = records.find((r) => r.module === "evidence-desk");
 
   return (
     <>
@@ -48,7 +53,7 @@ export default function EvidenceDeskPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {SEED_RECORDS.map((record) => {
+                  {records.map((record) => {
                     const module = getModule(record.module);
                     return (
                       <tr key={record.id} className="border-b border-border last:border-0">

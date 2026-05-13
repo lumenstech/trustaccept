@@ -1,5 +1,12 @@
-import { PrismaClient, ProductModule, RiskLevel, RiskStatus } from "@prisma/client";
-import { SEED_RECORDS } from "../lib/seed-data";
+import {
+  AuditEventType,
+  PrismaClient,
+  ProductModule,
+  RiskLevel,
+  RiskStatus,
+  Role,
+} from "@prisma/client";
+import { DEMO_ORGANIZATION_ID, DEMO_USER_ID, SEED_RECORDS, deriveRiskScore } from "../lib/seed-data";
 
 const prisma = new PrismaClient();
 
@@ -29,13 +36,21 @@ const STATUS_TO_ENUM: Record<string, RiskStatus> = {
 };
 
 async function main() {
-  const approver = await prisma.user.upsert({
-    where: { email: "approver@trustaccept.dev" },
+  const org = await prisma.organization.upsert({
+    where: { id: DEMO_ORGANIZATION_ID },
+    update: {},
+    create: { id: DEMO_ORGANIZATION_ID, name: "Lumens Internal" },
+  });
+
+  const owner = await prisma.user.upsert({
+    where: { email: "alex@trustaccept.dev" },
     update: {},
     create: {
-      email: "approver@trustaccept.dev",
+      id: DEMO_USER_ID,
+      email: "alex@trustaccept.dev",
       name: "Alex Greene",
-      role: "approver",
+      role: Role.OWNER,
+      organizationId: org.id,
     },
   });
 
@@ -45,14 +60,17 @@ async function main() {
       update: {},
       create: {
         id: record.id,
+        organizationId: org.id,
         module: MODULE_TO_ENUM[record.module],
         title: record.title,
         description: record.description,
         sourceSystem: record.sourceSystem,
         sourceType: record.sourceType,
         riskLevel: RISK_TO_ENUM[record.riskLevel],
+        riskScore: record.riskScore ?? deriveRiskScore(record.riskLevel),
         status: STATUS_TO_ENUM[record.status],
-        ownerId: approver.id,
+        ownerId: owner.id,
+        ownerLabel: record.owner,
         department: record.department,
         dueDate: record.dueDate ? new Date(record.dueDate) : null,
         expirationDate: record.expirationDate ? new Date(record.expirationDate) : null,
@@ -63,19 +81,29 @@ async function main() {
         technicalContext: record.technicalContext,
         frameworkTags: record.frameworkTags,
         sourceReferences: record.sourceReferences as object,
-        auditTimeline: {
-          create: record.auditTimeline.map((entry) => ({
-            actorLabel: entry.actor,
-            action: entry.action,
-            detail: entry.detail,
-            occurredAt: new Date(entry.occurredAt),
-          })),
-        },
+        createdById: owner.id,
+        updatedById: owner.id,
       },
     });
+
+    for (const entry of record.auditTimeline) {
+      await prisma.auditLog.create({
+        data: {
+          organizationId: org.id,
+          riskRecordId: record.id,
+          eventType: AuditEventType.RISK_RECORD_CREATED,
+          actorName: entry.actor,
+          metadata: {
+            action: entry.action,
+            detail: entry.detail,
+          },
+          createdAt: new Date(entry.occurredAt),
+        },
+      });
+    }
   }
 
-  console.log(`Seeded ${SEED_RECORDS.length} risk records.`);
+  console.log(`Seeded ${SEED_RECORDS.length} risk records in org ${org.id}.`);
 }
 
 main()

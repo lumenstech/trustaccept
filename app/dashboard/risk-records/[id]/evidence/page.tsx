@@ -7,10 +7,20 @@ import { Badge, RiskLevelBadge, StatusBadge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { summarizeRecordForEvidence } from "@/lib/evidence";
 import { getModule } from "@/lib/modules";
-import { findRecord } from "@/lib/seed-data";
+import { requireDashboardAccess } from "@/src/server/auth";
+import { getRiskRecordForOrganization } from "@/src/server/riskRecords";
+
+export const dynamic = "force-dynamic";
 
 export default function EvidencePacketPage({ params }: { params: { id: string } }) {
-  const record = findRecord(params.id);
+  const user = requireDashboardAccess();
+  const record = (() => {
+    try {
+      return getRiskRecordForOrganization(user, params.id);
+    } catch {
+      return null;
+    }
+  })();
   if (!record) notFound();
 
   const module = getModule(record.module);

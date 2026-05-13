@@ -3,6 +3,7 @@ import { LeadCapturePage } from "@/components/site/lead-capture-page";
 export default function Page() {
   return (
     <LeadCapturePage
+      formType="start-pilot"
       eyebrow="TrustAccept Pilot"
       title="Stand up one TrustAccept module in your environment."
       subtitle="Workflow design, integration mapping, and approver onboarding for a single product module. Designed to support audit evidence from day one."

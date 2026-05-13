@@ -1,13 +1,18 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RiskLevelBadge, StatusBadge, Badge } from "@/components/ui/badge";
-import { SEED_RECORDS } from "@/lib/seed-data";
+import { requireDashboardAccess } from "@/src/server/auth";
+import { listRiskRecordsForOrganization } from "@/src/server/riskRecords";
 import { getModule } from "@/lib/modules";
 
+export const dynamic = "force-dynamic";
+
 export default function RiskRecordsPage() {
+  const user = requireDashboardAccess();
+  const records = listRiskRecordsForOrganization(user);
   return (
     <>
       <DashboardHeader
@@ -15,12 +20,20 @@ export default function RiskRecordsPage() {
         title="All risk records"
         description="A flat table of every risk record across all modules. Each row links to its hosted approval page."
         actions={
-          <Link href="/dashboard/risk-records/new">
-            <Button>
-              <Plus className="h-4 w-4" />
-              New risk record
-            </Button>
-          </Link>
+          <>
+            <a href="/api/risk-records/export.csv">
+              <Button variant="outline">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </a>
+            <Link href="/dashboard/risk-records/new">
+              <Button>
+                <Plus className="h-4 w-4" />
+                New risk record
+              </Button>
+            </Link>
+          </>
         }
       />
       <div className="px-8 py-8">
@@ -43,7 +56,7 @@ export default function RiskRecordsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {SEED_RECORDS.map((record) => {
+                  {records.map((record) => {
                     const module = getModule(record.module);
                     return (
                       <tr key={record.id} className="border-b border-border last:border-0">

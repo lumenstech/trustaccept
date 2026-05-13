@@ -27,9 +27,27 @@ support powered by SequenceNow.
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS
 - shadcn/ui-style components (locally vendored under `components/ui/*`)
-- Prisma + PostgreSQL-compatible schema
+- Prisma + PostgreSQL-compatible schema (multi-tenant, append-only audit logs)
+- Zod-validated API surface
+- In-memory demo persistence backend, swap-ready for Prisma
 - Seed data for all seven modules
 - Mock authentication (production auth is delivered via SequenceNow)
+
+## Hardening status
+
+| Concern | Status | Notes |
+| --- | --- | --- |
+| Tenant-scoped persistence | demo-backed in-memory store + Prisma schema | Swap to Prisma adapter when `DATABASE_URL` is set |
+| Append-only audit logs | done | `src/server/auditLogs.ts`; never mutates or deletes existing entries |
+| Risk record wizard persistence | done | Posts to `POST /api/risk-records`; new record visible in Inbox, /approve, evidence packet |
+| Decision persistence | done | `PATCH /api/risk-records/[id]/decision` with optional note + review date |
+| Evidence PDF export | done | `GET /api/evidence-packets/[id]/export.pdf` returns a real `application/pdf` |
+| CSV export | done | `GET /api/risk-records/export.csv`, RFC-4180 escaping |
+| Lead capture persistence | done | `POST /api/leads`; mock notification dispatched |
+| Auth structure | demo user (Owner) | `src/server/auth.ts`; replace `getCurrentUser` in production |
+| Zod validation | done | `src/lib/validation.ts` |
+| Security headers | done | XCTO, XFO, Referrer-Policy, Permissions-Policy, CSP, HSTS (prod-only) |
+| Dashboard route protection | scaffolded | `middleware.ts` allows demo user; gate with `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` |
 
 ## Project layout
 
@@ -69,16 +87,31 @@ components/
   dashboard/                   # Dashboard shell + header
   risk/                        # Inbox card, wizard, decision actions, evidence actions
   forms/                       # Shared lead capture form
-lib/
-  types.ts                     # RiskRecord type and supporting types
+lib/                           # Browser-safe shared code
+  types.ts                     # RiskRecord, Organization, SessionUser, AuditLog, Lead types
   modules.ts                   # Seven product modules + decision button labels
-  seed-data.ts                 # In-memory seed records (used by UI and Prisma seed)
+  seed-data.ts                 # Seed records (with demo org + risk score), used by UI + Prisma seed
   module-query.ts              # ?module=... query param parsing + reverse mapping
-  decision.ts                  # Decision state transitions + next-step CTA
+  decision.ts                  # Pure decision state transitions + next-step CTA
   evidence.ts                  # Evidence packet summary + executive summary generator
   cta.ts                       # Marketing CTA → route mapping
+  leads.ts                     # Lead form vocab (risk areas, urgency)
   cn.ts                        # className helper
-tests/                         # Vitest unit tests for the lib helpers above
+src/
+  lib/validation.ts            # Zod input schemas for every write endpoint
+  server/
+    auth.ts                    # Demo user + organization-aware access helpers
+    store.ts                   # In-memory persistence backend (singleton via globalThis)
+    riskRecords.ts             # Risk record service (list/get/create/update/decision)
+    auditLogs.ts               # Append-only audit log writer + reader
+    evidencePackets.ts         # Packet summary + PDF generator
+    leads.ts                   # Lead capture persistence + notification trigger
+    notifications.ts           # Mock notification dispatcher (production: SequenceNow)
+    csv.ts                     # CSV escaping + risk record CSV builder
+    api.ts                     # API route error handler (Zod + auth errors)
+app/api/                       # Route handlers (risk records, decision, csv, pdf, leads, demo)
+middleware.ts                  # Dashboard + API route protection (demo-auth-friendly)
+tests/                         # Vitest unit tests
 prisma/
   schema.prisma                # PostgreSQL-compatible schema
   seed.ts                      # Prisma seed script (uses lib/seed-data.ts)
@@ -87,11 +120,12 @@ prisma/
 ## Run locally
 
 ```bash
-# 1. Install dependencies
+# 1. Install dependencies and generate the Prisma client
 npm install
+npm run db:generate
 
 # 2. (optional) Bring up Postgres and seed the database
-cp .env.example .env
+cp .env.example .env       # set DATABASE_URL
 npm run db:push
 npm run db:seed
 
@@ -99,10 +133,23 @@ npm run db:seed
 npm run dev
 
 # 4. Verify
-npm run typecheck   # tsc --noEmit
-npm run test        # vitest run
-npm run build       # next build
+npm run typecheck          # tsc --noEmit
+npm run test               # vitest run
+npm run build              # next build
 ```
+
+### Environment variables
+
+| Variable | Purpose | Default in demo |
+| --- | --- | --- |
+| `DATABASE_URL` | Postgres connection string used by Prisma | Not required while the in-memory store is active |
+| `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
+| `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
+
+### What is mocked vs real
+
+- **Mocked**: identity (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
+- **Real**: append-only audit log writes, organization-scoped reads, Zod validation, RFC 4180 CSV escaping, dynamic Next.js rendering of dashboard pages, security headers + middleware, decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're
@@ -155,15 +202,33 @@ Hosted approval:
 Every module produces the same `RiskRecord` shape. See `lib/types.ts` and
 `prisma/schema.prisma`:
 
-- `id`, `module`, `title`, `description`
-- `sourceSystem`, `sourceType`
-- `riskLevel`, `status`
-- `owner`, `department`
-- `dueDate`, `expirationDate`, `reviewDate`
-- `decision`, `decisionBy`, `decisionAt`
-- `compensatingControls`, `evidenceSummary`, `businessJustification`, `technicalContext`
-- `frameworkTags`, `sourceReferences`
-- `auditTimeline`
+- Identity: `id`, `organizationId`, `createdById`, `updatedById`, `createdAt`, `updatedAt`
+- Classification: `module`, `riskLevel`, `riskScore`, `frameworkTags`
+- Narrative: `title`, `description`, `compensatingControls`, `evidenceSummary`, `businessJustification`, `technicalContext`
+- Source: `sourceSystem`, `sourceType`, `sourceReferences`
+- Lifecycle: `status`, `dueDate`, `expirationDate`, `reviewDate`
+- Decision: `decision`, `decisionBy`, `decisionAt`, `decisionNote`
+- Audit: `auditTimeline` (human-readable) + organization-scoped `AuditLog` entries
+
+`AuditLog` (`src/server/auditLogs.ts`) is append-only by application convention.
+The schema enforces foreign keys but the service module never mutates or deletes
+existing entries.
+
+## API surface
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/risk-records` | List records for the caller's org (filter by `?module=`, `?status=`) |
+| `POST` | `/api/risk-records` | Create a record (Zod-validated, audit logged) |
+| `GET` | `/api/risk-records/[id]` | Fetch one record, organization-scoped |
+| `PATCH` | `/api/risk-records/[id]/decision` | Persist a decision with optional note + review date |
+| `GET` | `/api/risk-records/export.csv` | Tenant-scoped CSV export |
+| `GET`/`POST` | `/api/evidence-packets/[id]/export.pdf` | Stream a real `application/pdf` evidence packet |
+| `POST` | `/api/leads` | Persist a service-led lead capture submission |
+| `GET` | `/api/demo/risk-flow` | Demo overview JSON for integration smoke tests |
+
+All write endpoints validate input with Zod (`src/lib/validation.ts`),
+enforce organization scope (`src/server/auth.ts`), and append an audit log.
 
 ## Module-aware decision buttons
 
@@ -173,6 +238,7 @@ module:
 | Module | Accept | Reject | Remediate |
 | --- | --- | --- | --- |
 | AI Action Gate | Approve Action | Reject Action | Require Review |
+| Access Accept | Approve Access | Reject Access | Require More Evidence |
 | Secure Release Gate | Approve Release | Block Release | Require Remediation |
 | Device Accept | Approve Device | Reject Device | Require More Evidence |
 | Evidence Desk | Mark Reviewed | Request Update | Export Evidence |
@@ -223,9 +289,16 @@ npm run test
 Covers:
 
 - `lib/module-query.ts` — `?module=...` parsing across underscore, hyphen, mixed case, and array inputs
-- `lib/decision.ts` — `applyDecision` state transitions, audit timeline append, immutability, next-step CTA mapping
+- `lib/decision.ts` — pure decision state transitions, audit timeline append, immutability, next-step CTA mapping
 - `lib/evidence.ts` — evidence packet summary, executive summary generation, language guardrails
 - `lib/cta.ts` — CTA → route map including module-prefilled product secondary CTA
+- `src/lib/validation.ts` — Zod schemas for risk record create, decision input, lead capture, evidence export
+- `src/server/auth.ts` — organization-aware access helper (forbidden errors for cross-tenant or missing records)
+- `src/server/riskRecords.ts` — `createRiskRecord` + `updateRiskRecordDecision` persistence, audit-log append, status filters
+- `src/server/auditLogs.ts` — append-only behavior
+- `src/server/evidencePackets.ts` — packet summary, audit emission, PDF buffer starts with `%PDF-`
+- `src/server/leads.ts` — lead persistence + mock notification dispatch
+- `src/server/csv.ts` — CSV escaping (RFC 4180), stable headers across all seven modules
 
 ## Language guardrails
 

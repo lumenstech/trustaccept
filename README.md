@@ -62,6 +62,30 @@ Resolved through `getApprovalLabels(record)` in `lib/access.ts`. The inbox card,
 hosted approval page, and Access Accept dashboard all use the same helper so
 the labels stay consistent across surfaces.
 
+### End-to-end verification (live)
+
+The full Access Accept flow has been driven against a running dev server (May 2026):
+
+| Step | Surface | Result |
+| --- | --- | --- |
+| 1. Identity event feed | `GET /dashboard/access-accept/events` | 200, renders the eight seeded events with prefilled "Create Risk Record" links |
+| 2. Prefilled intake form | `GET /dashboard/access-accept/new?requestType=…&source=…&user=…&riskLevel=…&targetSystem=…&eventId=…` | 200, form fields prefilled |
+| 3. Event → risk record | `POST /api/risk-records` (module=access-accept + accessContext) | 201, new record `ra-…`, status `pending`, audit timeline length 1 |
+| 4. Hosted approval page | `GET /approve/<id>` | 200, module-aware labels render: `Approve Access`, `Reject Access`, `Require More Evidence` |
+| 5. Decision recorded | `PATCH /api/risk-records/<id>/decision` action=accept | status flips to `accepted`, `decision=accept`, `decisionBy` set, audit timeline length 2, last action `decided.accept` |
+| 6. Evidence packet | `GET /dashboard/risk-records/<id>/evidence` | 200, "Identity & access context" card renders requester/target/privilege/duration/approval owner |
+| 7. PDF export | `GET /api/evidence-packets/<id>/export.pdf` | 200, `content-type: application/pdf`, `content-disposition: attachment`, body starts with `%PDF-1.4` and ends with `%%EOF`; embeds the audit log including `risk_record.created`, `decision.accepted`, `evidence_packet.generated` |
+| 8. API demo | `GET /api/demo/risk-flow` | returns `counts.accessAccept`, `counts.accessAcceptPending`, and the Access Accept example event payload + five-step flow |
+
+To reproduce:
+
+```bash
+PORT=3100 npm run dev &
+until curl -fsS http://127.0.0.1:3100/api/demo/risk-flow >/dev/null; do sleep 2; done
+# Then walk the table above; sample commands live in the commit message of
+# the verification pass.
+```
+
 ### Demo workflow
 
 ```
@@ -197,11 +221,19 @@ npm run build              # next build
 
 ```bash
 npm install
-npm run db:generate     # npx prisma generate
-npm run typecheck       # tsc --noEmit
-npm run test            # vitest run
-npm run build           # next build
+npm run prisma:generate   # prisma generate (alias: npm run db:generate)
+npm run typecheck         # tsc --noEmit
+npm test                  # vitest run
+npm run build             # next build
 ```
+
+If `npm install` fails with `ETARGET No matching version found for hasown@^2.0.3`
+(or a similar error mentioning a transitive dep), it means npm is being forced
+to read from a stale offline cache. The fix is to **let npm reach the live
+registry** — drop any `--prefer-offline` / `--offline` flag and ensure the
+machine can reach `https://registry.npmjs.org`. The repo's `package-lock.json`
+pins resolved tarballs to that registry; once the lockfile is honored, the
+install completes without modifying versions.
 
 ### Environment variables
 

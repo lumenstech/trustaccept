@@ -199,3 +199,130 @@ model Lead {
   status      LeadStatus   @default(NEW)
   createdAt   DateTime     @default(now())
 }
+
+
+enum AgentIdentityStatus { TRUSTED UNKNOWN BLOCKED }
+enum AgentPolicyDefaultMode { ALLOW REQUIRE_REVIEW BLOCK }
+enum AgentActionRiskLevel { LOW MEDIUM HIGH CRITICAL }
+enum AgentActionStatus { PENDING_REVIEW APPROVED REJECTED AUTO_APPROVED AUTO_REJECTED EXPIRED }
+enum AgentDecisionType { APPROVED REJECTED REQUEST_MORE_INFO }
+enum AgentActorType { SYSTEM AGENT REVIEWER MERCHANT_ADMIN }
+enum WebhookDeliveryStatus { PENDING DELIVERED FAILED }
+
+model Merchant {
+  id         String   @id @default(cuid())
+  name       String
+  apiKeyHash String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  policies   AgentPolicy[]
+  actions    AgentAction[]
+  auditEvents AuditEvent[]
+}
+
+model AgentIdentity {
+  id           String @id @default(cuid())
+  agentId      String @unique
+  name         String
+  status       AgentIdentityStatus @default(UNKNOWN)
+  publicKeyPem String?
+  keyId        String? @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AgentPolicy {
+  id                       String @id @default(cuid())
+  merchantId               String
+  merchant                 Merchant @relation(fields:[merchantId], references:[id])
+  defaultMode              AgentPolicyDefaultMode @default(REQUIRE_REVIEW)
+  autoApproveBelowAmount   Decimal @default(0) @db.Decimal(12,2)
+  requireReviewAboveAmount Decimal @default(500) @db.Decimal(12,2)
+  blockAboveAmount         Decimal @default(5000) @db.Decimal(12,2)
+  allowedActionTypes       Json
+  blockedActionTypes       Json
+  allowedCategories        Json
+  blockedCategories        Json
+  allowedAgentIds          Json
+  blockUnknownAgents       Boolean @default(true)
+  requireTapSignature      Boolean @default(true)
+  businessHoursOnly        Boolean @default(false)
+  webhookUrl               String?
+  webhookSecretHash        String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  @@unique([merchantId])
+}
+
+model AgentAction {
+  id              String @id @default(cuid())
+  merchantId      String
+  merchant        Merchant @relation(fields:[merchantId], references:[id])
+  agentId         String
+  agentName       String
+  consumerRef     String
+  actionType      String
+  amount          Decimal @db.Decimal(12,2)
+  currency        String
+  category        String
+  paymentToken    String?
+  description     String?
+  metadata        Json
+  tapVerification Json
+  policyResult    Json
+  riskScore       Int
+  riskLevel       AgentActionRiskLevel
+  status          AgentActionStatus
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  expiresAt       DateTime?
+  decisions       AgentDecision[]
+  auditEvents     AuditEvent[]
+  webhookDeliveries WebhookDelivery[]
+}
+
+model AgentDecision {
+  id           String @id @default(cuid())
+  actionId     String
+  action       AgentAction @relation(fields:[actionId], references:[id], onDelete: Cascade)
+  decision     AgentDecisionType
+  note         String?
+  reviewerName String?
+  createdAt    DateTime @default(now())
+}
+
+model AuditEvent {
+  id         String @id @default(cuid())
+  actionId   String?
+  action     AgentAction? @relation(fields:[actionId], references:[id], onDelete: Cascade)
+  merchantId String?
+  merchant   Merchant? @relation(fields:[merchantId], references:[id])
+  eventType  String
+  actorType  AgentActorType
+  actorName  String?
+  message    String
+  data       Json
+  createdAt  DateTime @default(now())
+}
+
+model Nonce {
+  id        String @id @default(cuid())
+  nonce     String
+  agentId   String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@unique([nonce, agentId])
+}
+
+model WebhookDelivery {
+  id           String @id @default(cuid())
+  actionId      String
+  action        AgentAction @relation(fields:[actionId], references:[id], onDelete: Cascade)
+  url           String
+  status        WebhookDeliveryStatus
+  responseCode  Int?
+  responseBody  String?
+  attemptCount  Int @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

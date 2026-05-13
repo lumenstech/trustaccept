@@ -1,0 +1,2 @@
+import { agentStore } from '@/src/server/agent-commerce/store';
+export default function Page({params}:{params:{id:string}}){ const a=agentStore.actions.get(params.id); if(!a) return <main className='p-6'>Not found</main>; const audit=agentStore.audits.filter(x=>x.actionId===a.id); return <main className='p-6 space-y-3'><h1 className='text-2xl'>Action {a.id}</h1><pre>{JSON.stringify(a,null,2)}</pre><h2>Audit timeline</h2><ul>{audit.map((e,i)=><li key={i}>{e.createdAt} - {e.message}</li>)}</ul></main>}

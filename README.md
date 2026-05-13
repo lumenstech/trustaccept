@@ -500,3 +500,23 @@ We **do not** use:
 
 TrustAccept is a Lumens Technology product. Approval delivery and identity workflow
 support powered by SequenceNow.
+
+## TrustAccept Agentic Commerce Gateway (MVP)
+
+Added demo routes:
+- `/agentic-commerce`
+- `/dashboard/agent-actions`
+- `/dashboard/agent-actions/[id]`
+- `/dashboard/agent-policies`
+- `/docs/agentic-commerce-api`
+- `/demo/agentic-checkout`
+
+Demo API endpoints:
+- `POST /api/agent-actions`
+- `GET /api/agent-actions`
+- `GET /api/agent-actions/:id`
+- `POST /api/agent-actions/:id/decision`
+- `POST /api/tap/verify`
+- `POST /api/demo/seed`
+
+This implementation is TAP-compatible demo verification only and does not call Visa/Cybersource live APIs or process real payments.

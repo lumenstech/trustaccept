@@ -401,9 +401,20 @@ existing entries.
 | `GET`/`POST` | `/api/evidence-packets/[id]/export.pdf` | Stream a real `application/pdf` evidence packet |
 | `POST` | `/api/leads` | Persist a service-led lead capture submission |
 | `GET` | `/api/demo/risk-flow` | Demo overview JSON for integration smoke tests |
+| `POST` | `/api/decisions` | Create a TrustAccept-for-Slack decision request (requires `x-trustaccept-secret`) |
+| `GET` | `/api/integrations/slack/install` | Begin Slack OAuth install |
+| `GET` | `/api/integrations/slack/oauth/callback` | Slack OAuth callback |
+| `POST` | `/api/integrations/slack/interactions` | Slack interactivity endpoint (signature-verified) |
+| `POST` | `/api/demo/slack-decision` | Seed the canonical "refund $3,750" demo decision |
 
 All write endpoints validate input with Zod (`src/lib/validation.ts`),
 enforce organization scope (`src/server/auth.ts`), and append an audit log.
+
+## TrustAccept for Slack
+
+Approval inbox = Slack. System of record = TrustAccept. See
+[`docs/slack-integration.md`](docs/slack-integration.md) for the full
+setup, security model, and demo instructions.
 
 ## Module-aware decision buttons
 

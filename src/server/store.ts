@@ -10,6 +10,11 @@ import type {
   RiskRecord,
   SessionUser,
 } from "@/lib/types";
+import type {
+  DecisionAuditEvent,
+  DecisionRequest,
+  SlackInstallation,
+} from "./decisions/types";
 
 export interface EvidencePacketRecord {
   id: string;
@@ -26,6 +31,9 @@ export interface Store {
   auditLogs: AuditLog[];
   leads: Map<string, Lead>;
   evidencePackets: Map<string, EvidencePacketRecord>;
+  slackInstallations: Map<string, SlackInstallation>;
+  decisionRequests: Map<string, DecisionRequest>;
+  decisionAuditEvents: DecisionAuditEvent[];
 }
 
 function seedStore(): Store {
@@ -69,6 +77,9 @@ function seedStore(): Store {
     auditLogs,
     leads: new Map(),
     evidencePackets: new Map(),
+    slackInstallations: new Map(),
+    decisionRequests: new Map(),
+    decisionAuditEvents: [],
   };
 }
 

@@ -6,6 +6,7 @@ import {
   Inbox,
   KeyRound,
   LayoutDashboard,
+  MessagesSquare,
   PlugZap,
   Settings,
   ShieldQuestion,
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/inbox", label: "Approval Inbox", icon: Inbox },
+  { href: "/dashboard/decisions", label: "AI Decisions (Slack)", icon: MessagesSquare },
   { href: "/dashboard/access-accept", label: "Access Accept", icon: KeyRound },
   { href: "/dashboard/vulnerability-acceptance", label: "Vulnerability Accept", icon: Bug },
   { href: "/dashboard/risk-records", label: "Risk Records", icon: ShieldQuestion },

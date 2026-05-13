@@ -32,6 +32,7 @@ function isProtected(pathname: string): boolean {
   if (pathname.startsWith("/api/risk-records")) return true;
   if (pathname.startsWith("/api/evidence-packets")) return true;
   if (pathname.startsWith("/api/demo/")) return true;
+  if (pathname === "/api/integrations/slack/install") return true;
   return false;
 }
 
@@ -49,5 +50,6 @@ export const config = {
     "/api/risk-records/:path*",
     "/api/evidence-packets/:path*",
     "/api/demo/:path*",
+    "/api/integrations/slack/install",
   ],
 };

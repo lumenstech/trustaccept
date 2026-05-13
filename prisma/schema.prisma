@@ -73,6 +73,22 @@ enum LeadStatus {
   CLOSED
 }
 
+enum DecisionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELED
+  ERROR
+}
+
+enum DecisionActorType {
+  SYSTEM
+  SLACK_USER
+  API
+  ADMIN
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -184,6 +200,73 @@ model EvidencePacket {
 
   @@index([organizationId])
   @@index([riskRecordId])
+}
+
+/// Slack workspace install record. Bot token is stored verbatim here for the
+/// MVP; production should encrypt at rest (KMS-wrapped) per the
+/// docs/slack-integration.md guidance.
+model SlackInstallation {
+  id                         String   @id @default(cuid())
+  slackTeamId                String   @unique
+  slackTeamName              String
+  slackBotUserId             String
+  slackBotToken              String
+  defaultApprovalChannelId   String?
+  defaultApprovalChannelName String?
+  installedBySlackUserId     String?
+  installedAt                DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  decisionRequests           DecisionRequest[]
+}
+
+model DecisionRequest {
+  id                       String                 @id @default(cuid())
+  externalId               String?
+  source                   String
+  actionType               String
+  title                    String
+  description              String                 @db.Text
+  riskLevel                RiskLevel
+  status                   DecisionRequestStatus  @default(PENDING)
+  requester                String
+  subject                  String
+  amount                   Float?
+  currency                 String?
+  evidenceUrl              String?
+  metadata                 Json
+
+  slackTeamId              String?
+  slackInstallation        SlackInstallation?     @relation(fields: [slackTeamId], references: [slackTeamId])
+  slackChannelId           String?
+  slackMessageTs           String?
+
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  decidedAt                DateTime?
+  decidedBySlackUserId     String?
+  decidedByName            String?
+  decisionReason           String?                @db.Text
+
+  auditEvents              DecisionAuditEvent[]
+
+  @@index([slackTeamId, status])
+  @@index([status, createdAt])
+}
+
+/// Append-only by application convention.
+model DecisionAuditEvent {
+  id          String             @id @default(cuid())
+  decisionId  String
+  decision    DecisionRequest    @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  eventType   String
+  actorType   DecisionActorType
+  actorId     String?
+  message     String             @db.Text
+  metadata    Json
+  createdAt   DateTime           @default(now())
+
+  @@index([decisionId, createdAt])
 }
 
 model Lead {

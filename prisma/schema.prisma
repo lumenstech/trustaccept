@@ -1,0 +1,201 @@
+// TrustAccept core schema
+// PostgreSQL-compatible. Mock auth for now; identities live in the User table.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductModule {
+  AI_ACTION_GATE
+  ACCESS_ACCEPT
+  VULNERABILITY_ACCEPT
+  KEV_EXPOSURE_REVIEW
+  SECURE_RELEASE_GATE
+  DEVICE_ACCEPT
+  EVIDENCE_DESK
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RiskStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  REMEDIATION_REQUIRED
+  EXPIRED
+}
+
+enum Decision {
+  ACCEPT
+  REJECT
+  REMEDIATE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  APPROVER
+  VIEWER
+}
+
+enum AuditEventType {
+  RISK_RECORD_CREATED
+  RISK_RECORD_UPDATED
+  DECISION_ACCEPTED
+  DECISION_REJECTED
+  DECISION_REMEDIATION_REQUIRED
+  EVIDENCE_PACKET_GENERATED
+  APPROVAL_PAGE_VIEWED
+  LEAD_FORM_SUBMITTED
+}
+
+enum LeadFormType {
+  BOOK_RISK_REVIEW
+  START_PILOT
+  REQUEST_EVIDENCE_DESK
+  CONTACT
+}
+
+enum LeadStatus {
+  NEW
+  IN_REVIEW
+  CONTACTED
+  CLOSED
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users          User[]
+  riskRecords    RiskRecord[]
+  auditLogs      AuditLog[]
+  evidencePackets EvidencePacket[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  role           Role     @default(VIEWER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+
+  ownedRecords   RiskRecord[] @relation("RecordOwner")
+  decidedRecords RiskRecord[] @relation("RecordDecider")
+  createdRecords RiskRecord[] @relation("RecordCreatedBy")
+  updatedRecords RiskRecord[] @relation("RecordUpdatedBy")
+  auditLogs      AuditLog[]
+}
+
+model RiskRecord {
+  id                    String         @id @default(cuid())
+  organizationId        String
+  organization          Organization   @relation(fields: [organizationId], references: [id])
+  module                ProductModule
+  title                 String
+  description           String         @db.Text
+  sourceSystem          String
+  sourceType            String
+  riskLevel             RiskLevel
+  riskScore             Int            @default(50)
+  status                RiskStatus     @default(PENDING)
+
+  ownerId               String?
+  owner                 User?          @relation("RecordOwner", fields: [ownerId], references: [id])
+  ownerLabel            String
+  department            String
+
+  dueDate               DateTime?
+  expirationDate        DateTime?
+  reviewDate            DateTime?
+
+  decision              Decision?
+  decisionById          String?
+  decisionBy            User?          @relation("RecordDecider", fields: [decisionById], references: [id])
+  decisionByLabel       String?
+  decisionAt            DateTime?
+  decisionNote          String?        @db.Text
+
+  compensatingControls  String         @db.Text
+  evidenceSummary       String         @db.Text
+  businessJustification String         @db.Text
+  technicalContext      String         @db.Text
+
+  frameworkTags         String[]
+  sourceReferences      Json
+
+  createdById           String?
+  createdBy             User?          @relation("RecordCreatedBy", fields: [createdById], references: [id])
+  updatedById           String?
+  updatedBy             User?          @relation("RecordUpdatedBy", fields: [updatedById], references: [id])
+
+  evidencePackets       EvidencePacket[]
+  auditLogs             AuditLog[]
+
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, module])
+}
+
+/// Append-only by application convention. The service layer must only INSERT.
+model AuditLog {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  riskRecordId   String?
+  riskRecord     RiskRecord?    @relation(fields: [riskRecordId], references: [id], onDelete: Cascade)
+  eventType      AuditEventType
+  actorId        String?
+  actor          User?          @relation(fields: [actorId], references: [id])
+  actorName      String
+  previousStatus RiskStatus?
+  newStatus      RiskStatus?
+  metadata       Json
+  createdAt      DateTime       @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([riskRecordId, createdAt])
+}
+
+model EvidencePacket {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  riskRecordId   String
+  riskRecord     RiskRecord   @relation(fields: [riskRecordId], references: [id], onDelete: Cascade)
+  summary        Json
+  generatedAt    DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([riskRecordId])
+}
+
+model Lead {
+  id          String       @id @default(cuid())
+  formType    LeadFormType
+  name        String
+  company     String
+  email       String
+  phone       String?
+  riskArea    String
+  urgency     String
+  description String       @db.Text
+  status      LeadStatus   @default(NEW)
+  createdAt   DateTime     @default(now())
+}

@@ -314,18 +314,89 @@ install completes without modifying versions.
 
 | Variable | Purpose | Default in demo |
 | --- | --- | --- |
-| `DATABASE_URL` | Postgres connection string used by Prisma | Not required while the in-memory store is active |
-| `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
-| `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
+| `TRUSTACCEPT_PERSISTENCE` | `prisma` switches every read/write through Postgres. Anything else uses the in-memory store. | unset (in-memory) |
+| `DATABASE_URL` | Postgres connection string used by Prisma. Required when `TRUSTACCEPT_PERSISTENCE=prisma`. | not required in in-memory mode |
+| `TEST_DATABASE_URL` | Override URL used by `tests/integration/*`. Falls back to `DATABASE_URL`. | unset |
+| `TRUSTACCEPT_PRISMA_LOG` | `1` enables Prisma's warn-level logging. | unset |
+| `NODE_ENV` | `production` flips on HSTS and tightens CSP. | `development` |
+| `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie. | unset |
+| `TRUSTACCEPT_SIGNING_KEY_PEM` / `TRUSTACCEPT_SIGNING_KEY_ID` | RS256 private key + key id for decision receipts. | a 2048-bit ephemeral key per process |
+| `RUN_INTEGRATION_TESTS` | `1` includes `tests/integration/**` in the vitest run. | unset |
+
+## Persistence
+
+TrustAccept ships with two interchangeable persistence backends. The choice is
+made at module load time by inspecting `process.env.TRUSTACCEPT_PERSISTENCE`.
+Service modules import `getStore` from `src/server/store.adapter.ts`, which
+hands them the right implementation; route handlers, the dashboard pages, and
+the existing service signatures are unchanged.
+
+### In-memory mode (default)
+
+- Source of truth: `globalThis.__TRUSTACCEPT_STORE__`, an in-process `Map`
+  singleton seeded from `lib/seed-data.ts`.
+- Restarts lose every write.
+- No external dependency. `npm run dev`, `npm run build`, and `npm test` all
+  work with zero env flags.
+
+### Prisma mode
+
+- Source of truth: PostgreSQL via Prisma (`prisma/schema.prisma`).
+- Reads serve from an in-process cache that hydrates **once** at module load
+  via top-level `await`. After hydration every cache mutation is mirrored to
+  Postgres through a serialised write queue (`src/server/writeQueue.ts`).
+- Tenant isolation is enforced by `src/server/tenantPrisma.ts`, a small facade
+  that auto-injects `tenantId` / `organizationId` into every query and exposes
+  **no** `update`/`delete` on `AuditLog` (audit rows are insert-only by
+  application convention).
+- Single-process only. A second Node instance would not see writes from the
+  first until it restarts and re-hydrates. Multi-process deploy and a real
+  pub/sub invalidation are follow-up work.
+
+### Bring up a dev Postgres
+
+```bash
+docker compose up -d postgres
+cp .env.example .env                  # then set TRUSTACCEPT_PERSISTENCE=prisma
+npx prisma migrate deploy             # applies prisma/migrations/*
+npx tsx scripts/seed-prisma.ts        # idempotent — loads the 21 seed records
+TRUSTACCEPT_PERSISTENCE=prisma npm run dev
+```
+
+The dev server now writes to Postgres. Kill it, restart it, and your data is
+still there. The docker-compose volume `trustaccept_pg_data` persists across
+restarts of the container.
+
+### Run the integration suite
+
+The default `npm test` excludes integration tests so the in-memory suite stays
+hermetic. Bring up Postgres, then:
+
+```bash
+docker compose up -d postgres
+npx prisma migrate deploy
+TRUSTACCEPT_PERSISTENCE=prisma RUN_INTEGRATION_TESTS=1 npm test -- tests/integration
+```
+
+The integration suite (`tests/integration/prisma.test.ts`) truncates
+tenant-scoped tables between cases and re-seeds the 21 demo RiskRecords so
+its starting fixture matches what the in-memory store produces. Point
+`TEST_DATABASE_URL` at a throwaway database if you don't want this to run
+against your dev data.
+
+The legacy in-memory unit tests (`tests/api.*`, `tests/services.test.ts`,
+etc.) are designed for the synchronous in-memory store and are not run in
+Prisma mode. They import `__resetStoreForTests` from `./store` directly, so
+their reset never touches the Prisma cache. The persistence flip is observed
+end-to-end through the integration suite instead.
 
 ### What is mocked vs real
 
 - **Mocked**: identity (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: append-only audit log writes, organization-scoped reads, Zod validation, RFC 4180 CSV escaping, dynamic Next.js rendering of dashboard pages, security headers + middleware, decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Real**: append-only audit log writes, organization-scoped reads, Zod validation, RFC 4180 CSV escaping, dynamic Next.js rendering of dashboard pages, security headers + middleware, decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry, optional Postgres persistence via Prisma.
 
-The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
-front-end without a database. Prisma and the seed script are wired up for when you're
-ready to back the platform with PostgreSQL.
+The UI reads seed records from `lib/seed-data.ts` in in-memory mode and from
+Postgres in Prisma mode. Both modes render the same 21 demo records.
 
 Open <http://localhost:3000> for the marketing site, or
 <http://localhost:3000/dashboard> for the workspace.

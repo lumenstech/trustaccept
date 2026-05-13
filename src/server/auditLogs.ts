@@ -1,5 +1,5 @@
 import type { AuditEventType, AuditLog, RiskStatus, SessionUser } from "@/lib/types";
-import { getStore } from "./store";
+import { getStore } from "./store.adapter";
 
 let counter = 0;
 function generateAuditId(): string {

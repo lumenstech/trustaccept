@@ -1,6 +1,6 @@
 import type { CapCheckResult } from "@/lib/decisions";
 import type { Agent, SpendCaps } from "@/lib/agents";
-import { getStore } from "./store";
+import { getStore } from "./store.adapter";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTH_MS = 30 * DAY_MS;

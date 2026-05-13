@@ -13,7 +13,7 @@ import type {
 } from "@/lib/types";
 import { recordAuditEvent } from "./auditLogs";
 import { assertCanAccessOrganizationRecord } from "./auth";
-import { getStore } from "./store";
+import { getStore } from "./store.adapter";
 
 let recordCounter = 0;
 function generateRecordId(): string {

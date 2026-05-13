@@ -6,7 +6,7 @@ import { evidenceSha256 } from "./evidenceHash";
 import { getAgent } from "./agents";
 import { signCompactJws } from "./receipts";
 import { evaluateCapCheck } from "./spendCap";
-import { getStore } from "./store";
+import { getStore } from "./store.adapter";
 
 export class DecisionAgentUnusableError extends Error {
   status = 409 as const;

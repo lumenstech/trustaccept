@@ -2,7 +2,7 @@ import { DEMO_ORGANIZATION_ID } from "@/lib/seed-data";
 import type { Lead, LeadFormType } from "@/lib/types";
 import { recordAuditEvent } from "./auditLogs";
 import { notifyLeadReceived } from "./notifications";
-import { getStore } from "./store";
+import { getStore } from "./store.adapter";
 
 let counter = 0;
 function generateLeadId(): string {

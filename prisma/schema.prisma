@@ -136,6 +136,9 @@ model RiskRecord {
 
   frameworkTags         String[]
   sourceReferences      Json
+  auditTimeline         Json           @default("[]")
+  accessContext         Json?
+  vulnerabilityContext  Json?
 
   createdById           String?
   createdBy             User?          @relation("RecordCreatedBy", fields: [createdById], references: [id])

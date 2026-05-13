@@ -3,7 +3,7 @@ import type { RiskRecord, SessionUser } from "@/lib/types";
 import { recordAuditEvent } from "./auditLogs";
 import { assertCanAccessOrganizationRecord } from "./auth";
 import { listAuditLogsForRecord } from "./auditLogs";
-import { getStore, type EvidencePacketRecord } from "./store";
+import { getStore, type EvidencePacketRecord } from "./store.adapter";
 
 let counter = 0;
 function generatePacketId(): string {

@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: trustaccept-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trustaccept
+      POSTGRES_PASSWORD: trustaccept
+      POSTGRES_DB: trustaccept
+    ports:
+      - "5432:5432"
+    volumes:
+      - trustaccept_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trustaccept -d trustaccept"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  trustaccept_pg_data:
+    name: trustaccept_pg_data

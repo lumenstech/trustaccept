@@ -2,7 +2,7 @@ import type { Agent, AgentStatus, SpendCaps } from "@/lib/agents";
 import type { SessionUser } from "@/lib/types";
 import type { AgentCreateInputType, AgentPatchInputType } from "@/src/lib/validation";
 import { ForbiddenError } from "./auth";
-import { getStore } from "./store";
+import { getStore } from "./store.adapter";
 
 export class AgentNotFoundError extends Error {
   status = 404 as const;

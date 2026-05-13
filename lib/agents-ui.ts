@@ -188,3 +188,75 @@ export function validateAgentForm(input: AgentFormInput): AgentFormValidation {
   }
   return { ok: true, body, errors: {} };
 }
+
+/**
+ * Convert an existing Agent into the form's text-shaped input state so
+ * the edit screen can be pre-populated from the server's serialized
+ * representation. Spend caps come in as numbers and are rendered as
+ * strings; allowed actions come in as string[] and are joined on
+ * newlines so the textarea reads naturally.
+ */
+export function agentToFormInput(agent: {
+  name: string;
+  ownerEmail: string;
+  department?: string | null;
+  environment: AgentFormInput["environment"];
+  riskTier: AgentFormInput["risk_tier"];
+  allowedActions: string[];
+  spendCaps: AgentSpendCaps;
+}): AgentFormInput {
+  const cap = (n: number | undefined) =>
+    typeof n === "number" ? String(n) : "";
+  return {
+    name: agent.name,
+    owner_email: agent.ownerEmail,
+    department: agent.department ?? "",
+    environment: agent.environment,
+    risk_tier: agent.riskTier,
+    allowed_actions_text: agent.allowedActions.join("\n"),
+    spend_caps: {
+      per_txn_usd: cap(agent.spendCaps.per_txn_usd),
+      daily_usd: cap(agent.spendCaps.daily_usd),
+      weekly_usd: cap(agent.spendCaps.weekly_usd),
+      monthly_usd: cap(agent.spendCaps.monthly_usd),
+    },
+  };
+}
+
+export type AgentPatchBody = Partial<AgentCreateBody>;
+
+/**
+ * Build a PATCH body containing only the fields that differ from the
+ * server's current view of the agent. Avoids round-tripping unchanged
+ * values (which the server would accept but adds noise to audit logs).
+ * Returns an empty object when nothing changed; callers should skip
+ * the network call in that case.
+ */
+export function buildPatchBody(
+  current: AgentCreateBody,
+  next: AgentCreateBody,
+): AgentPatchBody {
+  const patch: AgentPatchBody = {};
+  if (next.name !== current.name) patch.name = next.name;
+  if (next.owner_email !== current.owner_email) {
+    patch.owner_email = next.owner_email;
+  }
+  if ((next.department ?? "") !== (current.department ?? "")) {
+    if (next.department) patch.department = next.department;
+  }
+  if (next.environment !== current.environment) patch.environment = next.environment;
+  if (next.risk_tier !== current.risk_tier) patch.risk_tier = next.risk_tier;
+
+  const sameActions =
+    next.allowed_actions.length === current.allowed_actions.length &&
+    next.allowed_actions.every((a, i) => a === current.allowed_actions[i]);
+  if (!sameActions) patch.allowed_actions = next.allowed_actions;
+
+  const capKeys = ["per_txn_usd", "daily_usd", "weekly_usd", "monthly_usd"] as const;
+  const capsDiffer = capKeys.some(
+    (k) => (next.spend_caps[k] ?? null) !== (current.spend_caps[k] ?? null),
+  );
+  if (capsDiffer) patch.spend_caps = next.spend_caps;
+
+  return patch;
+}

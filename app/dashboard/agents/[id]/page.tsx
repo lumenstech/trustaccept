@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, FileSignature } from "lucide-react";
+import { AlertTriangle, ArrowLeft, FileSignature, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +55,19 @@ export default function AgentDetailPage({ params }: Props) {
         title={agent.name}
         description={agent.ownerEmail}
         actions={
-          isAdmin ? <AgentLifecycleActions agent={agent} variant="detail" /> : null
+          isAdmin ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {agent.status !== "revoked" ? (
+                <Link href={`/dashboard/agents/${agent.id}/edit`}>
+                  <Button variant="outline">
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </Button>
+                </Link>
+              ) : null}
+              <AgentLifecycleActions agent={agent} variant="detail" />
+            </div>
+          ) : null
         }
       />
       <div className="space-y-8 px-8 py-8">

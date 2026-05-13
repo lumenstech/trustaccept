@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   agentRiskTierTone,
   agentStatusTone,
+  agentToFormInput,
+  buildPatchBody,
   formatAllowedActionsCount,
   formatSpendCapsSummary,
   lifecyclePermissions,
   parseAllowedActions,
   validateAgentForm,
+  type AgentCreateBody,
 } from "@/lib/agents-ui";
 import type { Agent } from "@/lib/types";
 
@@ -168,5 +171,100 @@ describe("pause / revoke button behavior", () => {
   it("revoke confirmation includes the agent name", () => {
     const p = lifecyclePermissions(fakeAgent({ name: "evil-twin" }));
     expect(p.revokeConfirmation).toContain('"evil-twin"');
+  });
+});
+
+describe("agentToFormInput / buildPatchBody — edit form round-trip", () => {
+  it("seeds the form state from a live agent", () => {
+    const input = agentToFormInput(
+      fakeAgent({
+        name: "support-copilot",
+        ownerEmail: "ops@trustaccept.dev",
+        department: "Ops",
+        environment: "staging",
+        riskTier: "medium",
+        allowedActions: ["read.customer", "draft.email"],
+        spendCaps: { daily_usd: 500, per_txn_usd: 25 },
+      }),
+    );
+    expect(input.name).toBe("support-copilot");
+    expect(input.environment).toBe("staging");
+    expect(input.risk_tier).toBe("medium");
+    expect(input.allowed_actions_text).toBe("read.customer\ndraft.email");
+    expect(input.spend_caps).toEqual({
+      per_txn_usd: "25",
+      daily_usd: "500",
+      weekly_usd: "",
+      monthly_usd: "",
+    });
+    expect(input.department).toBe("Ops");
+  });
+
+  it("treats a null department from the server as empty string", () => {
+    const input = agentToFormInput({
+      name: "n",
+      ownerEmail: "o@x.dev",
+      department: null,
+      environment: "dev",
+      riskTier: "low",
+      allowedActions: [],
+      spendCaps: {},
+    });
+    expect(input.department).toBe("");
+  });
+
+  const current: AgentCreateBody = {
+    name: "support-copilot",
+    owner_email: "ops@trustaccept.dev",
+    department: "Ops",
+    environment: "staging",
+    risk_tier: "medium",
+    allowed_actions: ["read.customer", "draft.email"],
+    spend_caps: { daily_usd: 500, per_txn_usd: 25 },
+  };
+
+  it("returns an empty patch when nothing changed", () => {
+    expect(buildPatchBody(current, { ...current })).toEqual({});
+  });
+
+  it("includes only the fields that differ", () => {
+    const next: AgentCreateBody = {
+      ...current,
+      risk_tier: "high",
+      spend_caps: { daily_usd: 750, per_txn_usd: 25 },
+    };
+    const patch = buildPatchBody(current, next);
+    expect(patch).toEqual({
+      risk_tier: "high",
+      spend_caps: { daily_usd: 750, per_txn_usd: 25 },
+    });
+  });
+
+  it("ignores allowed_actions when order and contents match", () => {
+    const patch = buildPatchBody(current, {
+      ...current,
+      allowed_actions: ["read.customer", "draft.email"],
+    });
+    expect("allowed_actions" in patch).toBe(false);
+  });
+
+  it("detects an added action and patches the full new array", () => {
+    const patch = buildPatchBody(current, {
+      ...current,
+      allowed_actions: ["read.customer", "draft.email", "send.email"],
+    });
+    expect(patch.allowed_actions).toEqual([
+      "read.customer",
+      "draft.email",
+      "send.email",
+    ]);
+  });
+
+  it("omits department from the patch when it was added back identically", () => {
+    const patch = buildPatchBody(
+      { ...current, department: "Ops" },
+      { ...current, department: "Ops" },
+    );
+    expect("department" in patch).toBe(false);
   });
 });

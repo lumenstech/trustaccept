@@ -7,9 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldGroup, HelpText, Input, Select, Textarea } from "@/components/ui/form";
 import {
+  agentToFormInput,
+  buildPatchBody,
   validateAgentForm,
+  type AgentCreateBody,
   type AgentFormInput,
 } from "@/lib/agents-ui";
+import type { Agent } from "@/lib/types";
 
 const EMPTY: AgentFormInput = {
   name: "",
@@ -26,9 +30,23 @@ const EMPTY: AgentFormInput = {
   },
 };
 
-export function AgentCreateForm() {
+type Mode =
+  | { kind: "create" }
+  | { kind: "edit"; agent: Agent };
+
+interface Props {
+  mode: Mode;
+}
+
+export function AgentForm({ mode }: Props) {
   const router = useRouter();
-  const [state, setState] = useState<AgentFormInput>(EMPTY);
+  const isEdit = mode.kind === "edit";
+  const initialBody: AgentCreateBody | null = isEdit
+    ? toBody(agentToFormInput(mode.agent))
+    : null;
+  const [state, setState] = useState<AgentFormInput>(
+    isEdit ? agentToFormInput(mode.agent) : EMPTY,
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,38 +69,69 @@ export function AgentCreateForm() {
     setErrors({});
     setSubmitting(true);
     try {
-      const res = await fetch("/api/v1/agents", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(result.body),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        if (body?.issues?.[0]) {
-          throw new Error(`${body.issues[0].path}: ${body.issues[0].message}`);
+      if (mode.kind === "create") {
+        const res = await fetch("/api/v1/agents", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(result.body),
+        });
+        if (!res.ok) {
+          throw new Error(await formatErr(res, "Could not create agent"));
         }
-        throw new Error(body?.error ?? "Could not create agent");
+        const json = await res.json();
+        router.push(`/dashboard/agents/${json.id}`);
+        router.refresh();
+      } else {
+        const patch = buildPatchBody(initialBody!, result.body!);
+        if (Object.keys(patch).length === 0) {
+          router.push(`/dashboard/agents/${mode.agent.id}`);
+          return;
+        }
+        const res = await fetch(`/api/v1/agents/${mode.agent.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (!res.ok) {
+          throw new Error(await formatErr(res, "Could not update agent"));
+        }
+        router.push(`/dashboard/agents/${mode.agent.id}`);
+        router.refresh();
       }
-      const json = await res.json();
-      router.push(`/dashboard/agents/${json.id}`);
-      router.refresh();
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : "Could not create agent");
+      setServerError(
+        err instanceof Error ? err.message : "Could not save agent",
+      );
     } finally {
       setSubmitting(false);
     }
   }
+
+  const submitLabel = isEdit
+    ? submitting
+      ? "Saving…"
+      : "Save changes"
+    : submitting
+      ? "Creating…"
+      : "Create agent";
+
+  const cancelHref = isEdit
+    ? `/dashboard/agents/${mode.agent.id}`
+    : "/dashboard/agents";
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
           <BotMessageSquare className="h-5 w-5 text-primary" />
-          <CardTitle>Register a new agent</CardTitle>
+          <CardTitle>
+            {isEdit ? `Edit agent · ${mode.agent.name}` : "Register a new agent"}
+          </CardTitle>
         </div>
         <p className="text-sm text-muted-foreground">
-          Agents are scoped to your tenant. Once revoked, an agent cannot be
-          reactivated — create a new one instead.
+          {isEdit
+            ? "Update environment, risk tier, allowed actions, and spend caps. Status changes (pause / revoke) are handled separately."
+            : "Agents are scoped to your tenant. Once revoked, an agent cannot be reactivated — create a new one instead."}
         </p>
       </CardHeader>
       <CardContent>
@@ -214,7 +263,10 @@ export function AgentCreateForm() {
           </fieldset>
 
           {serverError ? (
-            <div className="flex items-center gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+            <div
+              className="flex items-center gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+              role="alert"
+            >
               <AlertCircle className="h-4 w-4" />
               {serverError}
             </div>
@@ -222,13 +274,13 @@ export function AgentCreateForm() {
 
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating…" : "Create agent"}
+              {submitLabel}
             </Button>
             <Button
               type="button"
               variant="outline"
               disabled={submitting}
-              onClick={() => router.push("/dashboard/agents")}
+              onClick={() => router.push(cancelHref)}
             >
               Cancel
             </Button>
@@ -237,4 +289,18 @@ export function AgentCreateForm() {
       </CardContent>
     </Card>
   );
+}
+
+function toBody(input: AgentFormInput): AgentCreateBody {
+  const result = validateAgentForm(input);
+  // Seeded from a live agent — values are always valid.
+  return result.body!;
+}
+
+async function formatErr(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  if (body?.issues?.[0]) {
+    return `${body.issues[0].path}: ${body.issues[0].message}`;
+  }
+  return body?.error ?? fallback;
 }

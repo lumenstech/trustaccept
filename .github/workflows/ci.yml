@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "prod-alpha/**"
+      - "ibmflavor/**"
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web app
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Production preflight schema
+        run: npm run verify:prod
+        env:
+          NODE_ENV: production
+          TRUSTACCEPT_STORAGE_BACKEND: prisma
+          DATABASE_URL: postgres://trustaccept:trustaccept@example.invalid:5432/trustaccept
+          TRUSTACCEPT_DISABLE_DEMO_AUTH: "1"
+          TRUSTACCEPT_REQUIRE_UPSTASH: "1"
+          UPSTASH_REDIS_REST_URL: https://upstash.example.invalid
+          UPSTASH_REDIS_REST_TOKEN: ci-upstash-token
+          TRUSTACCEPT_SESSION_KEY_PREFIX: trustaccept:session
+          TRUSTACCEPT_APPROVAL_TOKEN_SECRET: ci-approval-token-secret-32-chars
+          TRUSTACCEPT_PUBLIC_BASE_URL: https://trustaccept.example.invalid
+          TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM: |-
+            -----BEGIN PRIVATE KEY-----
+            ci
+            -----END PRIVATE KEY-----
+          TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK: "1"
+          SEQUENCENOW_WEBHOOK_URL: https://sequencenow.example.invalid/hooks/trustaccept
+          SEQUENCENOW_WEBHOOK_SECRET: ci-sequencenow-webhook-secret-32
+
+  mcp-server:
+    name: MCP server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/mcp-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/mcp-server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

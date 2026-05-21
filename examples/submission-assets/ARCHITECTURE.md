@@ -2,60 +2,79 @@
 
 End-to-end view of how an agent action flows through TrustAccept, from MCP tool invocation to externally-verifiable receipt. Every box in the diagram corresponds to a real file in this repository.
 
-## Flow diagram
+## End-to-end flow
 
 ```mermaid
 flowchart LR
-    subgraph Agent["AI agent process"]
-        AGENT["AI agent<br/>(any MCP client)"]
+    AGENT["AI agent<br/>(any MCP client)"]
+
+    subgraph MCP ["TrustAccept MCP server (stdio, standalone npm package)"]
+        MCPSRV["apps/mcp-server/src/<br/>index.ts + server.ts + tools.ts + client.ts"]
     end
 
-    subgraph MCP["TrustAccept MCP server<br/>(stdio, standalone npm package)"]
-        MCPSRV["apps/mcp-server/src/index.ts<br/>+ server.ts + tools.ts + client.ts"]
-    end
-
-    subgraph Wrapper["Next.js API wrapper<br/>(thin proxy over existing RiskRecord services)"]
+    subgraph Wrapper ["Next.js API wrapper (thin proxy over existing RiskRecord services)"]
         ROUTE["app/api/v1/approvals/route.ts"]
         SVC["src/server/approvals.ts"]
         POLICY["src/server/policies.ts<br/>(7 ordered rules)"]
-        HASH["src/server/action-hash.ts<br/>(canonical JSON → SHA-256)"]
+        HASH["src/server/action-hash.ts<br/>(canonical JSON SHA-256)"]
         STORE["src/server/riskRecords.ts<br/>+ auditLogs.ts + store.ts"]
     end
 
-    subgraph Human["Human approver"]
+    subgraph Human ["Human approver"]
         PAGE["app/approve/[id]/page.tsx<br/>(hosted approval page)"]
         DECISION["app/api/risk-records/[id]/decision/route.ts<br/>(PATCH)"]
     end
 
-    subgraph Receipts["Receipt issuance"]
+    subgraph Receipts ["Receipt issuance"]
         RECEIPT["src/server/receipts.ts<br/>(RS256 JWT, on demand)"]
         JWKS["app/api/jwks/route.ts<br/>(rewritten to /.well-known/jwks.json)"]
     end
 
-    subgraph Verify["External verifier"]
-        VERIFY["examples/verify-receipt/verify.mjs<br/>(zero TrustAccept deps)"]
+    subgraph Verify ["External verifier"]
+        VERIFIER["examples/verify-receipt/verify.mjs<br/>(zero TrustAccept deps)"]
     end
 
-    AGENT -- "tools/call request_approval (stdio)" --> MCPSRV
-    MCPSRV -- "POST /api/v1/approvals" --> ROUTE
+    AGENT -->|tools/call request_approval| MCPSRV
+    MCPSRV -->|POST /api/v1/approvals| ROUTE
     ROUTE --> SVC
     SVC --> POLICY
     SVC --> HASH
-    SVC -- "createRiskRecord<br/>(or finalize via updateRiskRecordDecision)" --> STORE
-    SVC -- "approval_url" --> AGENT
-    AGENT -- "open URL" --> PAGE
+    SVC -->|createRiskRecord| STORE
+    SVC -->|approval_url| AGENT
+    AGENT -->|open URL in browser| PAGE
     PAGE --> DECISION
-    DECISION -- "updateRiskRecordDecision<br/>(audit logged)" --> STORE
-    AGENT -- "tools/call get_approval_status (poll)" --> MCPSRV
-    MCPSRV -- "GET /api/v1/approvals/[id]" --> ROUTE
-    ROUTE --> SVC
-    SVC -- "issueReceipt(record)" --> RECEIPT
-    RECEIPT -- "receipt_jwt" --> SVC
-    SVC -- "approval{receipt_jwt}" --> MCPSRV
-    MCPSRV -- "tool result" --> AGENT
-    AGENT -- "JWT + public-key path" --> VERIFY
-    JWKS -. "optional fetch<br/>by external verifiers" .-> VERIFY
+    DECISION -->|updateRiskRecordDecision| STORE
+    AGENT -->|tools/call get_approval_status| MCPSRV
+    MCPSRV -->|GET /api/v1/approvals/id| ROUTE
+    SVC -->|issueReceipt record| RECEIPT
+    RECEIPT -->|receipt_jwt| SVC
+    SVC -->|approval with receipt_jwt| MCPSRV
+    MCPSRV -->|tool result| AGENT
+    AGENT -->|JWT and public-key path| VERIFIER
+    JWKS -.->|optional fetch| VERIFIER
 ```
+
+## Receipt verification flow (proves the "no TrustAccept access needed" guarantee)
+
+```mermaid
+sequenceDiagram
+    participant V as External Verifier
+    participant J as JWKS endpoint
+    participant U as User
+    V->>J: GET /.well-known/jwks.json
+    J-->>V: keys array containing kty RSA, n, e, kid, alg RS256
+    V->>V: Verify JWT signature with public key
+    V->>V: Compare action_hash to independently-computed SHA-256 of the action
+    V-->>U: VERIFIED or FAILED
+```
+
+The JWKS fetch is the only network call required and is optional — `verify-receipt` accepts a local public-key PEM file via `--public-key`, which is what the production-deploy-gatekeeper demo uses. In that mode, verification happens fully offline.
+
+## What the diagrams prove
+
+- **The MCP server is a thin proxy.** Policy evaluation and action hashing happen inside the Next.js wrapper (`src/server/policies.ts`, `src/server/action-hash.ts`), not in the MCP layer. Replacing the MCP server with a different transport or a direct HTTP client would not change a single security-relevant code path.
+- **Receipts are issued only on resolved decisions.** PENDING approvals have `receipt_jwt: null` in the locked output shape. `issueReceipt` checks the status and returns `null` for unresolved records before it even loads the signing key.
+- **External verification requires only the JWKS endpoint or a copy of the public key.** No TrustAccept API access, no database access, no signed agreement. An auditor or a downstream CI system can verify a receipt months later, including when TrustAccept itself is offline.
 
 ## Components and what they produce
 
@@ -126,6 +145,17 @@ End-to-end driver that calls the wrapper, prints the approval URL, polls until r
 | Wrapper ↔ storage | In-memory `Map` for the MVP; Prisma-ready schema in place for Postgres. | Internal to the deployment. |
 | Wrapper ↔ approval page | Public URL, no auth required to read; decision endpoint requires `requireDecisionAccess`. | The MVP treats the URL as the capability. Production should sign URLs (post-MVP). |
 | Wrapper ↔ external verifier | Receipt JWT (signed). JWKS endpoint (public). | The verifier trusts only the published public key. TrustAccept itself can be unreachable at verification time. |
+
+## Threat model considerations
+
+The MVP makes a small number of deliberate trade-offs that a security reviewer should be aware of. Each item below is roadmap, not oversight.
+
+- **Hosted approval URL is publicly readable.** The URL contains a timestamp-and-counter id generated by `generateRecordId` in `src/server/riskRecords.ts` (`ra-${Date.now().toString(36)}-${counter.toString(36)}`). The Prisma schema declares `@default(cuid())` for an eventual DB-backed mode, but the in-memory runtime uses the lower-entropy timestamp-and-counter format. **Roadmap**: signed URLs with HMAC tokens, plus a switch to cuid or UUIDv7 for the in-memory id generator.
+- **Single signing key.** `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` is one RSA key today. **Roadmap**: tenant-scoped keys with kid-based rotation in the JWKS response.
+- **No replay protection on receipts beyond approval expiration.** Receipts carry `iat` and the approval's `expires_at` but no `jti` or nonce. A captured receipt could in principle be re-presented; downstream systems that act on receipts should idempotency-key against `approval_id`. **Roadmap**: per-receipt nonce + a small revocation surface.
+- **Demo-mode permissive auth.** `requireDashboardAccess` and `requireDecisionAccess` in `src/server/auth.ts` always return the demo user in demo mode. **Roadmap**: full identity provider integration (SSO / SAML / OIDC); the middleware already gates by cookie presence so the swap is a matter of wiring a real session source.
+- **In-memory storage.** `src/server/store.ts` is a `Map`. Restarting the server resets state. **Roadmap**: Postgres backing via the existing Prisma schema, plus durable audit-log append.
+- **Rate limiting and DoS protection are a deployment-layer concern.** Not implemented in the application layer in the MVP. Operators should put a reverse proxy (nginx, Cloudflare, an API gateway) in front of `/api/v1/approvals` if the wrapper is exposed publicly. The hosted approval page and JWKS endpoint are also reasonable rate-limit targets.
 
 ## What's deliberately NOT in the diagram
 

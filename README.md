@@ -300,6 +300,7 @@ npm run prisma:generate   # prisma generate (alias: npm run db:generate)
 npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
+npm run verify:prod       # strict production env preflight; set TRUSTACCEPT_VERIFY_TARGET_URL to hit /api/health + /api/ready
 ```
 
 If `npm install` fails with `ETARGET No matching version found for hasown@^2.0.3`
@@ -329,9 +330,12 @@ install completes without modifying versions.
 | `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` | RS256 private key used to issue approval receipt JWTs | unset |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
+| `TRUSTACCEPT_VERIFY_TARGET_URL` | Optional deployed base URL for `npm run verify:prod` live checks | unset |
 
 ### Production readiness checks
 
+- `npm run verify:prod` is the deploy preflight. It fails unless production env is strict: Prisma storage, Neon `DATABASE_URL`, demo auth disabled, Upstash required/configured, approval token secret present, public base URL HTTPS, receipt private key present, and SequenceNow webhook required/configured.
+- Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health` and `/api/ready`.
 - `GET /api/health` is a liveness check and returns `200` when the process is up.
 - `GET /api/ready` checks the production dependencies that are configured:
   - Neon/Postgres via Prisma when `TRUSTACCEPT_STORAGE_BACKEND=prisma`.
@@ -392,6 +396,7 @@ SEQUENCENOW_WEBHOOK_SECRET=<shared webhook signing secret>
 TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1
 TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM=<RS256 private key PEM>
 TRUSTACCEPT_DISABLE_DEMO_AUTH=1
+TRUSTACCEPT_VERIFY_TARGET_URL=https://trustaccept.your-domain.example
 ```
 
 ### What is mocked vs real

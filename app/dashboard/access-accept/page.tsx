@@ -19,7 +19,7 @@ import {
   ACCESS_REQUEST_TYPES,
   type AccessRequestType,
 } from "@/lib/access";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { listRiskRecordsByModuleAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +81,7 @@ const SUMMARY_BUCKETS: Array<{
 ];
 
 export default async function AccessAcceptDashboardPage() {
-  const user = requireDashboardAccess();
+  const user = await requireDashboardAccessAsync();
   const records = await listRiskRecordsByModuleAsync(user, "access-accept");
 
   const cutoff = new Date();

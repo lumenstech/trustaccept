@@ -7,13 +7,13 @@ import { Badge, RiskLevelBadge, StatusBadge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { summarizeRecordForEvidence } from "@/lib/evidence";
 import { getModule } from "@/lib/modules";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { getRiskRecordForOrganizationAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
 
 export default async function EvidencePacketPage({ params }: { params: { id: string } }) {
-  const user = requireDashboardAccess();
+  const user = await requireDashboardAccessAsync();
   const record = await (async () => {
     try {
       return await getRiskRecordForOrganizationAsync(user, params.id);

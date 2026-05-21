@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { listAuditLogsForOrganizationAsync } from "@/src/server/auditLogs";
 import {
   listExpiringRiskRecordsAsync,
@@ -50,7 +50,7 @@ const VULNERABILITY_ACCEPT_DEMO_FLOW = [
 
 export async function GET() {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const accessRecords = await listRiskRecordsByModuleAsync(user, "access-accept");
     const vulnerabilityRecords = await listRiskRecordsByModuleAsync(
       user,

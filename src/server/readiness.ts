@@ -91,11 +91,31 @@ function checkReceiptKey(): ReadinessCheck {
   };
 }
 
+function checkAuthMode(): ReadinessCheck {
+  if (process.env.TRUSTACCEPT_DISABLE_DEMO_AUTH === "1") {
+    return {
+      name: "auth_mode",
+      state: "ok",
+      detail: "demo auth disabled; ta_session must resolve through SequenceNow/Upstash",
+    };
+  }
+
+  return {
+    name: "auth_mode",
+    state: process.env.NODE_ENV === "production" ? "error" : "skipped",
+    detail:
+      process.env.NODE_ENV === "production"
+        ? "TRUSTACCEPT_DISABLE_DEMO_AUTH=1 is required in production"
+        : "demo auth enabled",
+  };
+}
+
 export async function readinessReport(): Promise<ReadinessReport> {
   const checks = await Promise.all([
     checkPrisma(),
     checkUpstash(),
     Promise.resolve(checkReceiptKey()),
+    Promise.resolve(checkAuthMode()),
   ]);
   const status = checks.some((check) => check.state === "error")
     ? "not_ready"

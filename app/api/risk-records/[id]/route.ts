@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { getRiskRecordForOrganizationAsync } from "@/src/server/riskRecords";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const record = await getRiskRecordForOrganizationAsync(user, params.id);
     return NextResponse.json({ record });
   } catch (err) {

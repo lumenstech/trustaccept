@@ -319,6 +319,7 @@ install completes without modifying versions.
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint for short-lived production security state | unset |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | unset |
 | `TRUSTACCEPT_REQUIRE_UPSTASH` | Set to `1` so `/api/ready` fails when Upstash is missing or unreachable | `0` |
+| `TRUSTACCEPT_SESSION_KEY_PREFIX` | Upstash key prefix for SequenceNow session records | `trustaccept:session` |
 | `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` | RS256 private key used to issue approval receipt JWTs | unset |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
@@ -330,6 +331,29 @@ install completes without modifying versions.
   - Neon/Postgres via Prisma when `TRUSTACCEPT_STORAGE_BACKEND=prisma`.
   - Upstash Redis when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set; set `TRUSTACCEPT_REQUIRE_UPSTASH=1` to fail closed when Redis is missing.
   - Receipt signing key derivation. In `NODE_ENV=production`, `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` is required.
+  - Demo-auth mode. In `NODE_ENV=production`, `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` is required.
+
+### SequenceNow session contract
+
+Production requests authenticate with a `ta_session` cookie issued by the SequenceNow front door. TrustAccept never stores raw session tokens in Redis. It hashes the cookie value with SHA-256 and reads this Upstash key:
+
+```text
+${TRUSTACCEPT_SESSION_KEY_PREFIX}:<sha256(ta_session)>
+```
+
+The value must be JSON matching the server `SessionUser` shape:
+
+```json
+{
+  "id": "user_123",
+  "name": "Alex Greene",
+  "email": "alex@example.com",
+  "role": "OWNER",
+  "organizationId": "org_123"
+}
+```
+
+Allowed roles are `OWNER`, `ADMIN`, `APPROVER`, and `VIEWER`. Dashboard/API reads allow all four roles; decision writes require `OWNER`, `ADMIN`, or `APPROVER`.
 
 For the SequenceNow production project, set:
 
@@ -339,13 +363,15 @@ DATABASE_URL=<Neon pooled connection string>
 UPSTASH_REDIS_REST_URL=<Upstash REST URL>
 UPSTASH_REDIS_REST_TOKEN=<Upstash REST token>
 TRUSTACCEPT_REQUIRE_UPSTASH=1
+TRUSTACCEPT_SESSION_KEY_PREFIX=trustaccept:session
 TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM=<RS256 private key PEM>
+TRUSTACCEPT_DISABLE_DEMO_AUTH=1
 ```
 
 ### What is mocked vs real
 
-- **Mocked**: identity (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; Neon and Upstash readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Mocked**: identity only when demo auth is enabled (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
+- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; Neon and Upstash readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're

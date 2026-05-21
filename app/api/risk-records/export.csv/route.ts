@@ -1,11 +1,11 @@
 import { handleApiError } from "@/src/server/api";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { buildRiskRecordsCsv } from "@/src/server/csv";
 import { listRiskRecordsForOrganizationAsync } from "@/src/server/riskRecords";
 
 export async function GET() {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const records = await listRiskRecordsForOrganizationAsync(user);
     const csv = buildRiskRecordsCsv(records);
     return new Response(csv, {

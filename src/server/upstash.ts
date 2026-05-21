@@ -39,6 +39,12 @@ export async function upstashCommand<T = unknown>(
   return body;
 }
 
+export async function getUpstashJson<T>(key: string): Promise<T | null> {
+  const response = await upstashCommand<string | null>("GET", key);
+  if (response.result == null) return null;
+  return JSON.parse(response.result) as T;
+}
+
 export async function pingUpstash(): Promise<boolean> {
   const pong = await upstashCommand<string>("PING");
   return pong.result === "PONG" || pong.result === "OK";

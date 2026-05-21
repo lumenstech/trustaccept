@@ -1,12 +1,12 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { InboxCard } from "@/components/risk/inbox-card";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { listPendingRiskRecordsAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
 
 export default async function InboxPage() {
-  const user = requireDashboardAccess();
+  const user = await requireDashboardAccessAsync();
   const pending = await listPendingRiskRecordsAsync(user);
 
   return (

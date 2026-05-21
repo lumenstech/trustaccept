@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import {
   createRiskRecord,
   createRiskRecordAsync,
@@ -13,7 +13,7 @@ import type { ProductModuleKey, RiskStatus } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const module = req.nextUrl.searchParams.get("module") as ProductModuleKey | null;
     const status = req.nextUrl.searchParams.get("status") as RiskStatus | null;
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const json = await req.json();
     const input = RiskRecordCreateInput.parse(json);
     const record = await createRiskRecordAsync(

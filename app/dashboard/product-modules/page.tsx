@@ -4,13 +4,13 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MODULES } from "@/lib/modules";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { listRiskRecordsForOrganizationAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductModulesPage() {
-  const user = requireDashboardAccess();
+  const user = await requireDashboardAccessAsync();
   const records = await listRiskRecordsForOrganizationAsync(user);
   return (
     <>

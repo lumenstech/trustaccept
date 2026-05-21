@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { createApprovalAsync, listApprovalsAsync } from "@/src/server/approvals";
 import {
   ApprovalListQueryInput,
@@ -9,7 +9,7 @@ import {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const json = await req.json();
     const input = ApprovalRequestInput.parse(json);
     const approval = await createApprovalAsync(user, input);
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = requireDashboardAccess();
+    const user = await requireDashboardAccessAsync();
     const params = req.nextUrl.searchParams;
     const query = ApprovalListQueryInput.parse({
       status: params.get("status") ?? undefined,

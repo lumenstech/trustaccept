@@ -1,5 +1,5 @@
 import { handleApiError } from "@/src/server/api";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import {
   createEvidencePacketAsync,
   generateEvidencePdfAsync,
@@ -8,7 +8,7 @@ import { getRiskRecordForOrganizationAsync } from "@/src/server/riskRecords";
 import { EvidencePacketExportInput } from "@/src/lib/validation";
 
 async function exportPdf(id: string) {
-  const user = requireDashboardAccess();
+  const user = await requireDashboardAccessAsync();
   const { recordId } = EvidencePacketExportInput.parse({ recordId: id });
   const record = await getRiskRecordForOrganizationAsync(user, recordId);
   const packet = await createEvidencePacketAsync(user, record);

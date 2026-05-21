@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RiskLevelBadge, StatusBadge, Badge } from "@/components/ui/badge";
 import { Section } from "@/components/ui/section";
-import { requireDashboardAccess } from "@/src/server/auth";
+import { requireDashboardAccessAsync } from "@/src/server/auth";
 import {
   listExpiringRiskRecordsAsync,
   listPendingRiskRecordsAsync,
@@ -17,7 +17,7 @@ import { getModule } from "@/lib/modules";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardOverview() {
-  const user = requireDashboardAccess();
+  const user = await requireDashboardAccessAsync();
   const all = await listRiskRecordsForOrganizationAsync(user);
   const pending = await listPendingRiskRecordsAsync(user);
   const critical = all.filter((r) => r.riskLevel === "critical");

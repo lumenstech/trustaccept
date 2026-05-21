@@ -32,6 +32,9 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
+      - name: Validate Prisma migrations
+        run: npm run prisma:migrate:check
+
       - name: Typecheck
         run: npm run typecheck
 

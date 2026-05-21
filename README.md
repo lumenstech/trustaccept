@@ -297,6 +297,8 @@ npm run build              # next build
 ```bash
 npm install
 npm run prisma:generate   # prisma generate (alias: npm run db:generate)
+npm run prisma:migrate:check # verify checked-in migrations match schema.prisma
+npm run prisma:migrate:deploy # production-safe schema migration deploy
 npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
@@ -312,6 +314,13 @@ pins resolved tarballs to that registry; once the lockfile is honored, the
 install completes without modifying versions.
 
 ### Environment variables
+
+### Database migrations
+
+- Production deploys use checked-in Prisma migrations: `npm run prisma:migrate:deploy`.
+- CI and local release checks should run `npm run prisma:migrate:check` before deploy.
+- `npm run prisma:push` / `npm run db:push` are local-development helpers only. Do not use `db push` against Neon production; it bypasses migration history.
+- The initial migration lives at `prisma/migrations/20260521191500_init/migration.sql` and matches the current `prisma/schema.prisma`.
 
 | Variable | Purpose | Default in demo |
 | --- | --- | --- |

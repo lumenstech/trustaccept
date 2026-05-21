@@ -12,9 +12,13 @@
     "test:watch": "vitest",
     "verify:prod": "node scripts/verify-prod.mjs",
     "prisma:generate": "prisma generate",
+    "prisma:migrate:check": "node scripts/check-prisma-migration.mjs",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
     "db:generate": "prisma generate",
+    "db:migrate:check": "node scripts/check-prisma-migration.mjs",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts"
   },

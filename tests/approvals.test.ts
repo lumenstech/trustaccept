@@ -91,24 +91,67 @@ describe("createApproval — service layer", () => {
     expect(approval).toHaveProperty("decided_at");
   });
 
-  it("returns nulls for Block 4/5 fields when the no-op policy is in place", () => {
+  it("populates policy + action-hash fields from the live engine; only receipt_jwt and decision-state fields remain null while pending", () => {
     const user = requireCurrentUser();
     const approval = createApproval(user, baseRequest());
 
-    expect(approval.policy_id).toBeNull();
-    expect(approval.policy_reason).toBeNull();
-    expect(approval.action_hash).toBeNull();
+    // Block 4: populated
+    expect(approval.policy_id).toBe("production-deploys-require-human-approval");
+    expect(approval.risk_level).toBe("high");
+    expect(approval.policy_reason).toMatch(/production deploys/i);
+    expect(approval.action_hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(approval.expires_at).not.toBeNull();
+
+    // Block 5 / pending: still null
     expect(approval.receipt_jwt).toBeNull();
-    expect(approval.expires_at).toBeNull();
     expect(approval.decided_by).toBeNull();
     expect(approval.decision_actor_type).toBeNull();
     expect(approval.decided_at).toBeNull();
   });
 
-  it("stores the no-op policy's risk_level so the underlying schema is satisfied", () => {
+  it("derives risk_level from the matched policy (production_deploy → high)", () => {
     const user = requireCurrentUser();
     const approval = createApproval(user, baseRequest());
-    expect(approval.risk_level).toBe("medium");
+    expect(approval.risk_level).toBe("high");
+  });
+
+  it("auto-allows read_* actions through the policy engine and finalizes via the synthetic policy actor", () => {
+    const user = requireCurrentUser();
+    const approval = createApproval(user, {
+      ...baseRequest(),
+      action: {
+        type: "read_user_profile",
+        summary: "Read user profile for support session",
+        payload: { user_id: "u-42" },
+      },
+    });
+    expect(approval.status).toBe("accepted");
+    expect(approval.policy_id).toBe("read-only-low-risk-auto-allow");
+    expect(approval.risk_level).toBe("low");
+    expect(approval.decision_actor_type).toBe("policy");
+    expect(approval.decided_by).toBe("policy:read-only-low-risk-auto-allow");
+    expect(approval.decided_at).not.toBeNull();
+  });
+
+  it("produces identical action_hash for payloads with reordered keys", () => {
+    const user = requireCurrentUser();
+    const a = createApproval(user, {
+      ...baseRequest(),
+      action: {
+        type: "production_deploy",
+        summary: "Deploy with payload ordering A",
+        payload: { commit: "abc1234", service: "checkout-api" },
+      },
+    });
+    const b = createApproval(user, {
+      ...baseRequest(),
+      action: {
+        type: "production_deploy",
+        summary: "Deploy with payload ordering A",
+        payload: { service: "checkout-api", commit: "abc1234" },
+      },
+    });
+    expect(a.action_hash).toBe(b.action_hash);
   });
 
   it("supplies a default business_justification when context omits it", () => {

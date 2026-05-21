@@ -6,6 +6,8 @@ import {
   CalendarClock,
   Clock,
   FileCheck2,
+  Hash,
+  ScrollText,
   Shield,
   User2,
 } from "lucide-react";
@@ -16,14 +18,26 @@ import { Logo } from "@/components/site/logo";
 import { DecisionActions } from "@/components/risk/decision-actions";
 import { getModule } from "@/lib/modules";
 import { getRiskRecordPublic } from "@/src/server/riskRecords";
+import type { SourceReference } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+function findRefValue(refs: SourceReference[], label: string): string | null {
+  return refs.find((r) => r.label === label)?.externalId ?? null;
+}
 
 export default function ApprovePage({ params }: { params: { id: string } }) {
   const record = getRiskRecordPublic(params.id);
   if (!record) notFound();
 
   const module = getModule(record.module);
+
+  const policyId = findRefValue(record.sourceReferences, "Policy");
+  const actionType = findRefValue(record.sourceReferences, "Action type");
+  const actionHash = findRefValue(record.sourceReferences, "Action hash");
+  const policyReason = record.technicalContext?.trim() || null;
+  const hasPolicyContext = Boolean(policyId || actionType || actionHash || policyReason);
+  const shortHash = actionHash ? `${actionHash.slice(0, 23)}…` : null; // "sha256:" + 16 hex + ellipsis
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,6 +73,48 @@ export default function ApprovePage({ params }: { params: { id: string } }) {
             </div>
 
             <DecisionActions initialRecord={record} />
+
+            {hasPolicyContext ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-primary" />
+                    Policy decision
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {actionType ? (
+                      <PolicyFact label="Action type" value={actionType} mono />
+                    ) : null}
+                    {policyId ? (
+                      <PolicyFact label="Policy" value={policyId} mono />
+                    ) : null}
+                  </div>
+                  {actionHash ? (
+                    <div className="rounded-md border border-border bg-muted/30 p-3">
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                        <Hash className="h-3.5 w-3.5" />
+                        Action hash
+                      </div>
+                      <p
+                        className="mt-1 break-all font-mono text-xs"
+                        title={actionHash}
+                      >
+                        {shortHash}
+                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        SHA-256 of the action payload at request time. The signed
+                        receipt issued on resolution binds this exact hash.
+                      </p>
+                    </div>
+                  ) : null}
+                  {policyReason ? (
+                    <p className="text-sm text-muted-foreground">{policyReason}</p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : null}
 
             <SectionCard title="Compensating controls" body={record.compensatingControls} />
             <SectionCard title="Evidence summary" body={record.evidenceSummary} />
@@ -176,6 +232,29 @@ function Fact({
         {label}
       </span>
       <span className="text-right">{value}</span>
+    </div>
+  );
+}
+
+function PolicyFact({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={`mt-1 break-words ${mono ? "font-mono text-xs" : "text-sm"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

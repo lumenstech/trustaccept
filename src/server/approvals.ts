@@ -1,4 +1,4 @@
-import type { RiskLevel, RiskRecord, RiskStatus, SessionUser, SourceReference } from "@/lib/types";
+import type { RiskRecord, RiskStatus, SessionUser, SourceReference } from "@/lib/types";
 import {
   createRiskRecord,
   getRiskRecordForOrganization,
@@ -6,6 +6,11 @@ import {
   updateRiskRecordDecision,
   type RiskRecordCreateData,
 } from "./riskRecords";
+import { hashAction } from "./action-hash";
+import {
+  evaluateApprovalPolicy,
+  type PolicyEvaluation,
+} from "./policies";
 import type {
   ApprovalListQueryInputType,
   ApprovalRecord,
@@ -21,9 +26,10 @@ import type {
  * locked MCP-facing input/output shape. See apps/mcp-server/FIELD_MAPPING.md
  * for the storage contract that this module implements.
  *
- * Block 2 ships a no-op policy stub (always "require_approval", medium).
- * Block 4 will replace `evaluatePolicyStub` with the real engine in
- * src/server/policies.ts without changing this module's public surface.
+ * Block 4 wires the real policy engine (./policies) and action hashing
+ * (./action-hash) into createApproval; the wrapper's public surface
+ * (createApproval / getApproval / listApprovals / toApprovalRecord) is
+ * unchanged from Block 2.
  */
 
 const REFERENCE_SYSTEM = "trustaccept";
@@ -46,34 +52,10 @@ const STATIC_COMPENSATING_CONTROLS =
 const STATIC_EVIDENCE_SUMMARY =
   "Action hash and policy decision captured at request time; signed receipt JWT issued on resolution.";
 
-interface PolicyEvaluation {
-  decision: "allow" | "require_approval" | "deny";
-  policy_id: string | null;
-  risk_level: RiskLevel;
-  reason: string | null;
-  expires_at_seconds: number | null;
-}
-
-/**
- * Block 2 no-op policy. Always returns require_approval / medium so the
- * wrapper has a non-null riskLevel to satisfy the underlying schema, but
- * the policy_id / reason / expiry remain null until Block 4 wires the
- * real engine. The MCP output for these fields therefore returns null
- * during Block 2.
- */
-function evaluatePolicyStub(_input: ApprovalRequestInputType): PolicyEvaluation {
-  return {
-    decision: "require_approval",
-    policy_id: null,
-    risk_level: "medium",
-    reason: null,
-    expires_at_seconds: null,
-  };
-}
-
 function buildSourceReferences(
   input: ApprovalRequestInputType,
   policy: PolicyEvaluation,
+  actionHash: string,
 ): SourceReference[] {
   const ctx = input.context ?? {};
   const refs: SourceReference[] = [
@@ -128,19 +110,23 @@ function buildSourceReferences(
       externalId: input.tool_id,
     });
   }
-  if (policy.policy_id) {
-    refs.push({
-      system: REFERENCE_SYSTEM,
-      label: REF_LABELS.policy,
-      externalId: policy.policy_id,
-    });
-  }
+  refs.push({
+    system: REFERENCE_SYSTEM,
+    label: REF_LABELS.policy,
+    externalId: policy.policy_id,
+  });
+  refs.push({
+    system: REFERENCE_SYSTEM,
+    label: REF_LABELS.actionHash,
+    externalId: actionHash,
+  });
   return refs;
 }
 
 function buildCreateData(
   input: ApprovalRequestInputType,
   policy: PolicyEvaluation,
+  actionHash: string,
 ): RiskRecordCreateData {
   const ctx = input.context ?? {};
   const agentLabel = ctx.agent_name ?? "unnamed agent";
@@ -159,9 +145,9 @@ function buildCreateData(
     businessJustification:
       ctx.business_justification ??
       `Submitted via TrustAccept MCP by ${agentLabel}. No business justification provided.`,
-    technicalContext: policy.reason ?? "",
+    technicalContext: policy.reason,
     frameworkTags: [],
-    sourceReferences: buildSourceReferences(input, policy),
+    sourceReferences: buildSourceReferences(input, policy, actionHash),
   };
 }
 
@@ -257,20 +243,19 @@ export function createApproval(
   caller: SessionUser,
   input: ApprovalRequestInputType,
 ): ApprovalRecord {
-  const policy = evaluatePolicyStub(input);
-  const data = buildCreateData(input, policy);
+  const policy = evaluateApprovalPolicy(input);
+  const actionHash = hashAction(input.action);
+  const data = buildCreateData(input, policy, actionHash);
   const created = createRiskRecord(caller, data);
 
   if (policy.decision === "require_approval") {
     return toApprovalRecord(created);
   }
 
-  const actor = policy.policy_id
-    ? syntheticPolicyActor(caller, policy.policy_id)
-    : caller;
+  const actor = syntheticPolicyActor(caller, policy.policy_id);
   const finalized = updateRiskRecordDecision(actor, created.id, {
     action: policy.decision === "allow" ? "accept" : "reject",
-    decisionNote: policy.reason ?? `Auto-${policy.decision} by policy.`,
+    decisionNote: policy.reason,
   });
   return toApprovalRecord(finalized);
 }

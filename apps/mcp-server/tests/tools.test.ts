@@ -287,7 +287,11 @@ describe("ApprovalsClient — auth/header behavior", () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     await client.requestApproval({
-      action: { type: "production_deploy", summary: "Deploy v2.4.1 to production" },
+      action: {
+        type: "production_deploy",
+        summary: "Deploy v2.4.1 to production",
+        payload: {},
+      },
       principal: { type: "email", value: "alex@example.com" },
     });
     expect(fetchImpl).toHaveBeenCalledOnce();
@@ -306,7 +310,11 @@ describe("ApprovalsClient — auth/header behavior", () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     await client.requestApproval({
-      action: { type: "production_deploy", summary: "Deploy v2.4.1 to production" },
+      action: {
+        type: "production_deploy",
+        summary: "Deploy v2.4.1 to production",
+        payload: {},
+      },
       principal: { type: "email", value: "alex@example.com" },
     });
   });

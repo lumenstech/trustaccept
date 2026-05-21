@@ -1,0 +1,13 @@
+{
+  "name": "@trustaccept/production-deploy-gatekeeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end TrustAccept demo: an agent attempts a production deploy, a human approves on the hosted page, the agent fetches a signed receipt and verifies it externally.",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

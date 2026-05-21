@@ -1,0 +1,16 @@
+{
+  "name": "@trustaccept/verify-receipt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone verifier for TrustAccept receipt JWTs. Verifies RS256 signature and prints claims. No TrustAccept dependencies, no HTTP, no database.",
+  "bin": {
+    "trustaccept-verify": "verify.mjs"
+  },
+  "scripts": {
+    "verify": "node verify.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

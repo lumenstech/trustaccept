@@ -45,6 +45,12 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      // Public well-known JWKS for receipt verifiers.
+      { source: "/.well-known/jwks.json", destination: "/api/jwks" },
+    ];
+  },
 };
 
 module.exports = nextConfig;

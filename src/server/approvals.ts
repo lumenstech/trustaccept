@@ -11,6 +11,7 @@ import {
   evaluateApprovalPolicy,
   type PolicyEvaluation,
 } from "./policies";
+import { issueReceipt } from "./receipts";
 import type {
   ApprovalListQueryInputType,
   ApprovalRecord,
@@ -227,8 +228,7 @@ export function toApprovalRecord(record: RiskRecord): ApprovalRecord {
     policy_reason: record.technicalContext ? record.technicalContext : null,
     action_hash: findRef(record, REF_LABELS.actionHash),
     tool_id: findRef(record, REF_LABELS.toolId),
-    // Block 5 wires receipt JWT generation on demand.
-    receipt_jwt: null,
+    receipt_jwt: issueReceipt(record),
     expires_at: record.expirationDate ?? null,
     decided_by: record.decisionBy ?? null,
     decision_actor_type: decisionActorType(record),

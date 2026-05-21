@@ -156,6 +156,47 @@ describe("request_approval — happy path", () => {
   });
 });
 
+describe("request_approval — consolidated-schema validation", () => {
+  // Block 4 follow-up: the schema consolidation moved MCP off its own
+  // copy of the Zod schemas. This test proves the shared schema (now
+  // imported from src/lib/approval-types.ts) actually accepts a
+  // wrapper response with the Block-4 fields populated — not just
+  // the Block-2 all-nulls reality the original duplicate covered.
+  it("parses a wrapper response with populated policy_id, risk_level, action_hash, expires_at", async () => {
+    const populated = {
+      ...lockedApproval,
+      policy_id: "production-deploys-require-human-approval",
+      risk_level: "high",
+      policy_reason: "Production deploys require human approval.",
+      action_hash:
+        "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      expires_at: "2026-05-21T04:01:25.493Z",
+    };
+    const fetchImpl = fakeFetch(
+      () =>
+        new Response(JSON.stringify({ approval: populated }), { status: 201 }),
+    );
+    const result = await handleRequestApproval(makeClient(fetchImpl), {
+      action: {
+        type: "production_deploy",
+        summary: "Deploy v2.4.1 to production",
+      },
+      principal: { type: "email", value: "alex@example.com" },
+    });
+    expect(result.isError).not.toBe(true);
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.approval.policy_id).toBe(
+      "production-deploys-require-human-approval",
+    );
+    expect(parsed.approval.risk_level).toBe("high");
+    expect(parsed.approval.policy_reason).toBe(
+      "Production deploys require human approval.",
+    );
+    expect(parsed.approval.action_hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(parsed.approval.expires_at).toBe("2026-05-21T04:01:25.493Z");
+  });
+});
+
 describe("request_approval — error paths", () => {
   it("returns isError=true when the input fails schema validation (no HTTP call)", async () => {
     const fetchImpl = fakeFetch(() => new Response("{}"));

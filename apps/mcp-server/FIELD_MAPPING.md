@@ -32,7 +32,7 @@ request_approval({
 | `action.summary` | `RiskRecord.title` (first-class) | Zod requires `min(4).max(280)`. **Wrapper rejects summaries shorter than 4 chars at the schema layer.** |
 | `action.payload` | **NOT persisted directly.** Only the SHA-256 hash is stored (see `action_hash` below). | Plan rule: do not store full payload JSON. |
 | `principal.type` | `sourceReferences[]` as `{ system: "trustaccept", label: "Principal type", externalId: principal.type }` | One of `email \| phone \| user_id`. |
-| `principal.value` | `RiskRecord.owner` (first-class string, `min(1).max(120)`) AND `sourceReferences[]` as `{ system: "trustaccept", label: "Principal value", externalId: principal.value }` | `owner` is the display field; the source reference makes the principal queryable. **If `principal.value` > 120 chars, truncate the `owner` mirror with `…` suffix; the `sourceReferences[]` entry still respects the 120-char cap (wrapper rejects values > 120 chars at validation).** |
+| `principal.value` | `RiskRecord.owner` (first-class string, `min(1).max(120)`) AND `sourceReferences[]` as `{ system: "trustaccept", label: "Principal value", externalId: principal.value }` | `owner` is the display field; the source reference is the **queryable source of truth** and must respect the 120-char cap exactly. **The wrapper rejects `principal.value > 120 chars` with a 400 validation error at the schema boundary — never silently truncate the queryable `sourceReferences[]` copy.** A future UI may render a truncated `owner` mirror (with `…` suffix) purely for display, but that does not authorize accepting an oversized principal value upstream. |
 | `context.agent_name` | `sourceReferences[]` as `{ system: "trustaccept", label: "Agent", externalId: agent_name }` | Optional. |
 | `context.environment` | `sourceReferences[]` as `{ system: "trustaccept", label: "Environment", externalId: environment }` | Optional. e.g. `"production"`. |
 | `context.amount` | `sourceReferences[]` as `{ system: "trustaccept", label: "Amount", externalId: String(amount) }` | Optional. **Stored as decimal string.** Policy engine reads `context.amount` directly from the request, not from storage. |
@@ -103,7 +103,7 @@ Receipts are issued on demand by `issueReceipt(decision)` and embedded in the re
 | `action_hash` | `sourceReferences[]` entry with `label: "Action hash"` → `externalId` (already prefixed `sha256:`) |
 | `policy_id` | `sourceReferences[]` entry with `label: "Policy"` → `externalId` |
 | `status` | Computed: human approval → `"approved"`; human denial → `"denied"`; policy allow → `"policy_allowed"`; policy deny → `"policy_denied"` (detect policy via `RiskRecord.decisionBy.startsWith("policy:")`) |
-| `decided_by` | If `decisionBy.startsWith("policy:")` → use `decisionBy` verbatim. Otherwise → email of the approver (looked up from the `SessionUser` that made the decision; for the MVP, this is the demo user's email `"alex@trustaccept.dev"`). |
+| `decided_by` | **`RiskRecord.decisionBy` verbatim — always.** This is the name string the existing decision path stores (`user.name` for humans, `"policy:{policy_id}"` for the synthetic policy actor). Do **not** look up an email from the user store at receipt-issuance time. Block 5's `receipts.md` must document this so the choice survives later refactors. |
 | `decision_actor_type` | `"policy"` if `decisionBy.startsWith("policy:")` else `"human"` |
 | `decided_at` | `RiskRecord.decisionAt` (ISO string) |
 | `expires_at` | `RiskRecord.expirationDate` (ISO string) or `null` |

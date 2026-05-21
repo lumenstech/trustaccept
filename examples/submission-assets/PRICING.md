@@ -28,7 +28,7 @@ Three tiers. Every feature listed under Starter and Team ships today in the repo
 Everything in Starter, plus:
 
 - Up to 5,000 approval requests per month
-- Action coverage across all five built-in policy categories: `production_deploy`, `customer_data_export`, `api_key_*` / `secret_*`, `payment`, `infrastructure_*` (all handled by the shipped policy engine; the `production-deploy-gatekeeper` demo today, additional demo scripts available on request)
+- Production-deploy gatekeeper template ships today. Additional templates (customer-data-export, api-key-issuance, payment, infrastructure-access) are roadmap items mapped 1:1 to the policy engine's five non-default rule categories.
 - Exportable audit logs (downloadable JSON / CSV; today via `src/server/auditLogs.ts` read helpers)
 - Priority support
 

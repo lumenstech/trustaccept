@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RiskLevelBadge, StatusBadge, Badge } from "@/components/ui/badge";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { listRiskRecordsForOrganization } from "@/src/server/riskRecords";
+import { listRiskRecordsForOrganizationAsync } from "@/src/server/riskRecords";
 import { getModule } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
-export default function RiskRecordsPage() {
+export default async function RiskRecordsPage() {
   const user = requireDashboardAccess();
-  const records = listRiskRecordsForOrganization(user);
+  const records = await listRiskRecordsForOrganizationAsync(user);
   return (
     <>
       <DashboardHeader

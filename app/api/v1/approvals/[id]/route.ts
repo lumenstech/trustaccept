@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { getApproval } from "@/src/server/approvals";
+import { getApprovalAsync } from "@/src/server/approvals";
 
 export async function GET(
   _req: Request,
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const user = requireDashboardAccess();
-    const approval = getApproval(user, params.id);
+    const approval = await getApprovalAsync(user, params.id);
     return NextResponse.json({ approval });
   } catch (err) {
     return handleApiError(err);

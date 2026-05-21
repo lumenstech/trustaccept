@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { createApproval, listApprovals } from "@/src/server/approvals";
+import { createApprovalAsync, listApprovalsAsync } from "@/src/server/approvals";
 import {
   ApprovalListQueryInput,
   ApprovalRequestInput,
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const user = requireDashboardAccess();
     const json = await req.json();
     const input = ApprovalRequestInput.parse(json);
-    const approval = createApproval(user, input);
+    const approval = await createApprovalAsync(user, input);
     return NextResponse.json({ approval }, { status: 201 });
   } catch (err) {
     return handleApiError(err);
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       principal_value: params.get("principal_value") ?? undefined,
       limit: params.get("limit") ?? undefined,
     });
-    const approvals = listApprovals(user, query);
+    const approvals = await listApprovalsAsync(user, query);
     return NextResponse.json({ approvals });
   } catch (err) {
     return handleApiError(err);

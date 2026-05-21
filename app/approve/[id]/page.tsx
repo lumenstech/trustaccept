@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/site/logo";
 import { DecisionActions } from "@/components/risk/decision-actions";
 import { getModule } from "@/lib/modules";
-import { getRiskRecordPublic } from "@/src/server/riskRecords";
+import { getRiskRecordPublicAsync } from "@/src/server/riskRecords";
 import type { SourceReference } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +26,8 @@ function findRefValue(refs: SourceReference[], label: string): string | null {
   return refs.find((r) => r.label === label)?.externalId ?? null;
 }
 
-export default function ApprovePage({ params }: { params: { id: string } }) {
-  const record = getRiskRecordPublic(params.id);
+export default async function ApprovePage({ params }: { params: { id: string } }) {
+  const record = await getRiskRecordPublicAsync(params.id);
   if (!record) notFound();
 
   const module = getModule(record.module);

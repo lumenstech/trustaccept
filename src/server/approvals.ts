@@ -1,9 +1,13 @@
 import type { RiskRecord, RiskStatus, SessionUser, SourceReference } from "@/lib/types";
 import {
   createRiskRecord,
+  createRiskRecordAsync,
   getRiskRecordForOrganization,
+  getRiskRecordForOrganizationAsync,
   listRiskRecordsForOrganization,
+  listRiskRecordsForOrganizationAsync,
   updateRiskRecordDecision,
+  updateRiskRecordDecisionAsync,
   type RiskRecordCreateData,
 } from "./riskRecords";
 import { hashAction } from "./action-hash";
@@ -260,11 +264,40 @@ export function createApproval(
   return toApprovalRecord(finalized);
 }
 
+export async function createApprovalAsync(
+  caller: SessionUser,
+  input: ApprovalRequestInputType,
+): Promise<ApprovalRecord> {
+  const policy = evaluateApprovalPolicy(input);
+  const actionHash = hashAction(input.action);
+  const data = buildCreateData(input, policy, actionHash);
+  const created = await createRiskRecordAsync(caller, data);
+
+  if (policy.decision === "require_approval") {
+    return toApprovalRecord(created);
+  }
+
+  const actor = syntheticPolicyActor(caller, policy.policy_id);
+  const finalized = await updateRiskRecordDecisionAsync(actor, created.id, {
+    action: policy.decision === "allow" ? "accept" : "reject",
+    decisionNote: policy.reason,
+  });
+  return toApprovalRecord(finalized);
+}
+
 export function getApproval(
   caller: SessionUser,
   id: string,
 ): ApprovalRecord {
   const record = getRiskRecordForOrganization(caller, id);
+  return toApprovalRecord(record);
+}
+
+export async function getApprovalAsync(
+  caller: SessionUser,
+  id: string,
+): Promise<ApprovalRecord> {
+  const record = await getRiskRecordForOrganizationAsync(caller, id);
   return toApprovalRecord(record);
 }
 
@@ -281,6 +314,35 @@ export function listApprovals(
   query: ApprovalListQueryInputType,
 ): ApprovalRecord[] {
   let records = listRiskRecordsForOrganization(caller);
+
+  if (query.principal_type) {
+    records = records.filter(
+      (r) => findRef(r, REF_LABELS.principalType) === query.principal_type,
+    );
+  }
+  if (query.principal_value) {
+    records = records.filter(
+      (r) => findRef(r, REF_LABELS.principalValue) === query.principal_value,
+    );
+  }
+
+  const mapped = records.map(toApprovalRecord);
+
+  if (query.status) {
+    const wanted = STATUS_FILTERS[query.status];
+    return applyLimit(
+      mapped.filter((m) => m.status === wanted),
+      query.limit,
+    );
+  }
+  return applyLimit(mapped, query.limit);
+}
+
+export async function listApprovalsAsync(
+  caller: SessionUser,
+  query: ApprovalListQueryInputType,
+): Promise<ApprovalRecord[]> {
+  let records = await listRiskRecordsForOrganizationAsync(caller);
 
   if (query.principal_type) {
     records = records.filter(

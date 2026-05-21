@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { listAuditLogsForOrganization } from "@/src/server/auditLogs";
+import { listAuditLogsForOrganizationAsync } from "@/src/server/auditLogs";
 import {
-  listExpiringRiskRecords,
-  listPendingRiskRecords,
-  listRiskRecordsByModule,
-  listRiskRecordsForOrganization,
+  listExpiringRiskRecordsAsync,
+  listPendingRiskRecordsAsync,
+  listRiskRecordsByModuleAsync,
+  listRiskRecordsForOrganizationAsync,
 } from "@/src/server/riskRecords";
 
 const ACCESS_ACCEPT_EXAMPLE_EVENT = {
@@ -51,15 +51,22 @@ const VULNERABILITY_ACCEPT_DEMO_FLOW = [
 export async function GET() {
   try {
     const user = requireDashboardAccess();
-    const accessRecords = listRiskRecordsByModule(user, "access-accept");
-    const vulnerabilityRecords = listRiskRecordsByModule(user, "vulnerability-accept");
+    const accessRecords = await listRiskRecordsByModuleAsync(user, "access-accept");
+    const vulnerabilityRecords = await listRiskRecordsByModuleAsync(
+      user,
+      "vulnerability-accept",
+    );
+    const allRecords = await listRiskRecordsForOrganizationAsync(user);
+    const pendingRecords = await listPendingRiskRecordsAsync(user);
+    const expiringRecords = await listExpiringRiskRecordsAsync(user, 30);
+    const auditLogs = await listAuditLogsForOrganizationAsync(user.organizationId);
     return NextResponse.json({
       organizationId: user.organizationId,
       counts: {
-        total: listRiskRecordsForOrganization(user).length,
-        pending: listPendingRiskRecords(user).length,
-        expiringInNext30Days: listExpiringRiskRecords(user, 30).length,
-        auditEvents: listAuditLogsForOrganization(user.organizationId).length,
+        total: allRecords.length,
+        pending: pendingRecords.length,
+        expiringInNext30Days: expiringRecords.length,
+        auditEvents: auditLogs.length,
         accessAccept: accessRecords.length,
         accessAcceptPending: accessRecords.filter((r) => r.status === "pending").length,
         vulnerabilityAccept: vulnerabilityRecords.length,
@@ -68,7 +75,7 @@ export async function GET() {
           (r) => r.vulnerabilityContext?.releaseBlocking,
         ).length,
       },
-      pending: listPendingRiskRecords(user).map((r) => ({
+      pending: pendingRecords.map((r) => ({
         id: r.id,
         module: r.module,
         title: r.title,

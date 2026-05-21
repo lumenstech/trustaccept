@@ -191,7 +191,7 @@ by `/api/demo/risk-flow`:
 
 | Concern | Status | Notes |
 | --- | --- | --- |
-| Tenant-scoped persistence | demo-backed in-memory store + Prisma schema | Swap to Prisma adapter when `DATABASE_URL` is set |
+| Tenant-scoped persistence | Prisma adapter added for risk records, approvals, audit logs, and evidence packets | Set `TRUSTACCEPT_STORAGE_BACKEND=prisma` with `DATABASE_URL`; demo memory backend remains the default |
 | Append-only audit logs | done | `src/server/auditLogs.ts`; never mutates or deletes existing entries |
 | Risk record wizard persistence | done | Posts to `POST /api/risk-records`; new record visible in Inbox, /approve, evidence packet |
 | Decision persistence | done | `PATCH /api/risk-records/[id]/decision` with optional note + review date |
@@ -314,14 +314,15 @@ install completes without modifying versions.
 
 | Variable | Purpose | Default in demo |
 | --- | --- | --- |
-| `DATABASE_URL` | Postgres connection string used by Prisma | Not required while the in-memory store is active |
+| `DATABASE_URL` | Postgres connection string used by Prisma | Required when `TRUSTACCEPT_STORAGE_BACKEND=prisma` |
+| `TRUSTACCEPT_STORAGE_BACKEND` | Storage backend: `memory` for demo/test, `prisma` for durable Postgres-backed runtime | `memory` |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
 
 ### What is mocked vs real
 
 - **Mocked**: identity (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: append-only audit log writes, organization-scoped reads, Zod validation, RFC 4180 CSV escaping, dynamic Next.js rendering of dashboard pages, security headers + middleware, decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're

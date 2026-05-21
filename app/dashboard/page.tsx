@@ -7,22 +7,22 @@ import { RiskLevelBadge, StatusBadge, Badge } from "@/components/ui/badge";
 import { Section } from "@/components/ui/section";
 import { requireDashboardAccess } from "@/src/server/auth";
 import {
-  listExpiringRiskRecords,
-  listPendingRiskRecords,
-  listRiskRecordsByModule,
-  listRiskRecordsForOrganization,
+  listExpiringRiskRecordsAsync,
+  listPendingRiskRecordsAsync,
+  listRiskRecordsByModuleAsync,
+  listRiskRecordsForOrganizationAsync,
 } from "@/src/server/riskRecords";
 import { getModule } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardOverview() {
+export default async function DashboardOverview() {
   const user = requireDashboardAccess();
-  const all = listRiskRecordsForOrganization(user);
-  const pending = listPendingRiskRecords(user);
+  const all = await listRiskRecordsForOrganizationAsync(user);
+  const pending = await listPendingRiskRecordsAsync(user);
   const critical = all.filter((r) => r.riskLevel === "critical");
-  const kev = listRiskRecordsByModule(user, "kev-exposure-review");
-  const expiring = listExpiringRiskRecords(user, 30);
+  const kev = await listRiskRecordsByModuleAsync(user, "kev-exposure-review");
+  const expiring = await listExpiringRiskRecordsAsync(user, 30);
 
   const stats = [
     {

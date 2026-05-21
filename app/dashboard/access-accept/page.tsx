@@ -20,7 +20,7 @@ import {
   type AccessRequestType,
 } from "@/lib/access";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { listRiskRecordsByModule } from "@/src/server/riskRecords";
+import { listRiskRecordsByModuleAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
 
@@ -80,9 +80,9 @@ const SUMMARY_BUCKETS: Array<{
   },
 ];
 
-export default function AccessAcceptDashboardPage() {
+export default async function AccessAcceptDashboardPage() {
   const user = requireDashboardAccess();
-  const records = listRiskRecordsByModule(user, "access-accept");
+  const records = await listRiskRecordsByModuleAsync(user, "access-accept");
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() + 30);

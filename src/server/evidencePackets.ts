@@ -1,8 +1,11 @@
 import { summarizeRecordForEvidence, type EvidencePacketSummary } from "@/lib/evidence";
+import type { Prisma } from "@prisma/client";
 import type { RiskRecord, SessionUser } from "@/lib/types";
-import { recordAuditEvent } from "./auditLogs";
+import { recordAuditEvent, recordAuditEventAsync } from "./auditLogs";
 import { assertCanAccessOrganizationRecord } from "./auth";
-import { listAuditLogsForRecord } from "./auditLogs";
+import { listAuditLogsForRecord, listAuditLogsForRecordAsync } from "./auditLogs";
+import { prisma } from "./prisma";
+import { isPrismaStorage } from "./storageBackend";
 import { getStore, type EvidencePacketRecord } from "./store";
 
 let counter = 0;
@@ -48,6 +51,40 @@ export function createEvidencePacket(
   });
 
   return { ...stored, summary, record };
+}
+
+export async function createEvidencePacketAsync(
+  user: SessionUser,
+  record: RiskRecord,
+): Promise<EvidencePacket> {
+  if (!isPrismaStorage()) return createEvidencePacket(user, record);
+
+  assertCanAccessOrganizationRecord(user, record);
+  const summary = buildEvidencePacketSummary(record);
+  const stored = await prisma.evidencePacket.create({
+    data: {
+      organizationId: user.organizationId,
+      riskRecordId: record.id,
+      summary: summary as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  await recordAuditEventAsync({
+    eventType: "evidence_packet.generated",
+    actor: user,
+    organizationId: user.organizationId,
+    riskRecordId: record.id,
+    metadata: { packetId: stored.id },
+  });
+
+  return {
+    id: stored.id,
+    organizationId: stored.organizationId,
+    riskRecordId: stored.riskRecordId,
+    summary,
+    generatedAt: stored.generatedAt.toISOString(),
+    record,
+  };
 }
 
 export function getEvidencePacketForRiskRecord(
@@ -123,6 +160,77 @@ export function generateEvidencePdf(packet: EvidencePacket): Buffer {
   ];
 
   return buildMinimalPdf(lines.join("\n"));
+}
+
+export async function generateEvidencePdfAsync(packet: EvidencePacket): Promise<Buffer> {
+  const auditLogs = await listAuditLogsForRecordAsync(
+    packet.organizationId,
+    packet.riskRecordId,
+  );
+  return generateEvidencePdfWithAuditLogs(packet, auditLogs);
+}
+
+function generateEvidencePdfWithAuditLogs(
+  packet: EvidencePacket,
+  auditLogs: ReturnType<typeof listAuditLogsForRecord>,
+): Buffer {
+  const lines = evidencePdfLines(packet, auditLogs);
+  return buildMinimalPdf(lines.join("\n"));
+}
+
+function evidencePdfLines(
+  packet: EvidencePacket,
+  auditLogs: ReturnType<typeof listAuditLogsForRecord>,
+): string[] {
+  return [
+    "TrustAccept Evidence Packet",
+    "===========================",
+    "",
+    `Decision ID: ${packet.summary.decisionId}`,
+    `Module:      ${packet.summary.module}`,
+    `Risk level:  ${packet.summary.riskLevel}`,
+    `Source:      ${packet.summary.sourceSystem}`,
+    `Owner:       ${packet.summary.owner}`,
+    `Expires:     ${packet.summary.expirationDate}`,
+    `Outcome:     ${packet.summary.outcome}`,
+    "",
+    "Frameworks:",
+    ...packet.summary.frameworkTags.map((t) => `  - ${t}`),
+    "",
+    "Executive summary",
+    "-----------------",
+    packet.summary.executiveSummary,
+    "",
+    "Compensating controls",
+    "---------------------",
+    packet.record.compensatingControls,
+    "",
+    "Business justification",
+    "----------------------",
+    packet.record.businessJustification,
+    "",
+    "Technical context",
+    "-----------------",
+    packet.record.technicalContext,
+    "",
+    "Evidence summary",
+    "----------------",
+    packet.record.evidenceSummary,
+    "",
+    "Audit log",
+    "---------",
+    ...auditLogs.map(
+      (log) =>
+        `[${log.createdAt}] ${log.eventType} actor=${log.actorName}` +
+        (log.previousStatus || log.newStatus
+          ? ` ${log.previousStatus ?? "—"} → ${log.newStatus ?? "—"}`
+          : ""),
+    ),
+    "",
+    `Generated at ${packet.generatedAt}`,
+    "NIST-aligned · CISA KEV-aware · designed to support audit evidence",
+    "TrustAccept is a Lumens Technology product. Approval delivery powered by SequenceNow.",
+  ];
 }
 
 /**

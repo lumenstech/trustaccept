@@ -8,15 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { summarizeRecordForEvidence } from "@/lib/evidence";
 import { getModule } from "@/lib/modules";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { getRiskRecordForOrganization } from "@/src/server/riskRecords";
+import { getRiskRecordForOrganizationAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
 
-export default function EvidencePacketPage({ params }: { params: { id: string } }) {
+export default async function EvidencePacketPage({ params }: { params: { id: string } }) {
   const user = requireDashboardAccess();
-  const record = (() => {
+  const record = await (async () => {
     try {
-      return getRiskRecordForOrganization(user, params.id);
+      return await getRiskRecordForOrganizationAsync(user, params.id);
     } catch {
       return null;
     }

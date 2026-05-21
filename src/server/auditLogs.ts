@@ -1,4 +1,8 @@
 import type { AuditEventType, AuditLog, RiskStatus, SessionUser } from "@/lib/types";
+import type { Prisma } from "@prisma/client";
+import { auditEventToPrisma, auditLogFromPrisma, riskStatusToPrisma } from "./prismaMappers";
+import { prisma } from "./prisma";
+import { isPrismaStorage } from "./storageBackend";
 import { getStore } from "./store";
 
 let counter = 0;
@@ -39,6 +43,26 @@ export function recordAuditEvent(input: RecordAuditEventInput): AuditLog {
   return entry;
 }
 
+export async function recordAuditEventAsync(input: RecordAuditEventInput): Promise<AuditLog> {
+  if (!isPrismaStorage()) return recordAuditEvent(input);
+
+  const row = await prisma.auditLog.create({
+    data: {
+      organizationId: input.organizationId,
+      riskRecordId: input.riskRecordId,
+      eventType: auditEventToPrisma(input.eventType),
+      actorId: "id" in input.actor ? input.actor.id : undefined,
+      actorName: input.actor.name,
+      previousStatus: input.previousStatus
+        ? riskStatusToPrisma(input.previousStatus)
+        : undefined,
+      newStatus: input.newStatus ? riskStatusToPrisma(input.newStatus) : undefined,
+      metadata: (input.metadata ?? {}) as Prisma.InputJsonValue,
+    },
+  });
+  return auditLogFromPrisma(row);
+}
+
 export function listAuditLogsForRecord(
   organizationId: string,
   riskRecordId: string,
@@ -50,8 +74,33 @@ export function listAuditLogsForRecord(
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+export async function listAuditLogsForRecordAsync(
+  organizationId: string,
+  riskRecordId: string,
+): Promise<AuditLog[]> {
+  if (!isPrismaStorage()) return listAuditLogsForRecord(organizationId, riskRecordId);
+
+  const rows = await prisma.auditLog.findMany({
+    where: { organizationId, riskRecordId },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map(auditLogFromPrisma);
+}
+
 export function listAuditLogsForOrganization(organizationId: string): AuditLog[] {
   return getStore()
     .auditLogs.filter((log) => log.organizationId === organizationId)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function listAuditLogsForOrganizationAsync(
+  organizationId: string,
+): Promise<AuditLog[]> {
+  if (!isPrismaStorage()) return listAuditLogsForOrganization(organizationId);
+
+  const rows = await prisma.auditLog.findMany({
+    where: { organizationId },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map(auditLogFromPrisma);
 }

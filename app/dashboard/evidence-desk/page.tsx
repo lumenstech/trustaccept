@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, RiskLevelBadge, StatusBadge } from "@/components/ui/badge";
 import { requireDashboardAccess } from "@/src/server/auth";
-import { listRiskRecordsForOrganization } from "@/src/server/riskRecords";
+import { listRiskRecordsForOrganizationAsync } from "@/src/server/riskRecords";
 import { getModule } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
-export default function EvidenceDeskPage() {
+export default async function EvidenceDeskPage() {
   const user = requireDashboardAccess();
-  const records = listRiskRecordsForOrganization(user);
+  const records = await listRiskRecordsForOrganizationAsync(user);
   const monthly = records.find((r) => r.module === "evidence-desk");
 
   return (

@@ -1,0 +1,37 @@
+import { NextRequest, NextResponse } from "next/server";
+import { handleApiError } from "@/src/server/api";
+import { requireDashboardAccess } from "@/src/server/auth";
+import { createApproval, listApprovals } from "@/src/server/approvals";
+import {
+  ApprovalListQueryInput,
+  ApprovalRequestInput,
+} from "@/src/lib/approval-types";
+
+export async function POST(req: NextRequest) {
+  try {
+    const user = requireDashboardAccess();
+    const json = await req.json();
+    const input = ApprovalRequestInput.parse(json);
+    const approval = createApproval(user, input);
+    return NextResponse.json({ approval }, { status: 201 });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const user = requireDashboardAccess();
+    const params = req.nextUrl.searchParams;
+    const query = ApprovalListQueryInput.parse({
+      status: params.get("status") ?? undefined,
+      principal_type: params.get("principal_type") ?? undefined,
+      principal_value: params.get("principal_value") ?? undefined,
+      limit: params.get("limit") ?? undefined,
+    });
+    const approvals = listApprovals(user, query);
+    return NextResponse.json({ approvals });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}

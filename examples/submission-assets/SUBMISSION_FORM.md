@@ -73,7 +73,7 @@ Captured live transcript backup: [`examples/production-deploy-gatekeeper/SAMPLE_
 - **Repository**: https://github.com/lumenstech/trustaccept
 - **Branch**: `ibmflavor/marketplace-submission`
 - **Engineering-freeze commit**: `371a165`
-- **Submission snapshot tag**: `submission-2026-05-21` (annotated, points at commit `399ec02`)
+- **Submission snapshot tag**: `submission-2026-05-21` (annotated, points at commit `5d6180d`)
   - Browse the submission package at the tag: https://github.com/lumenstech/trustaccept/tree/submission-2026-05-21/examples/submission-assets
   - Tag landing page (with annotation message): https://github.com/lumenstech/trustaccept/releases/tag/submission-2026-05-21
 

@@ -316,13 +316,36 @@ install completes without modifying versions.
 | --- | --- | --- |
 | `DATABASE_URL` | Postgres connection string used by Prisma | Required when `TRUSTACCEPT_STORAGE_BACKEND=prisma` |
 | `TRUSTACCEPT_STORAGE_BACKEND` | Storage backend: `memory` for demo/test, `prisma` for durable Postgres-backed runtime | `memory` |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint for short-lived production security state | unset |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | unset |
+| `TRUSTACCEPT_REQUIRE_UPSTASH` | Set to `1` so `/api/ready` fails when Upstash is missing or unreachable | `0` |
+| `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` | RS256 private key used to issue approval receipt JWTs | unset |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
+
+### Production readiness checks
+
+- `GET /api/health` is a liveness check and returns `200` when the process is up.
+- `GET /api/ready` checks the production dependencies that are configured:
+  - Neon/Postgres via Prisma when `TRUSTACCEPT_STORAGE_BACKEND=prisma`.
+  - Upstash Redis when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set; set `TRUSTACCEPT_REQUIRE_UPSTASH=1` to fail closed when Redis is missing.
+  - Receipt signing key derivation. In `NODE_ENV=production`, `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` is required.
+
+For the SequenceNow production project, set:
+
+```bash
+TRUSTACCEPT_STORAGE_BACKEND=prisma
+DATABASE_URL=<Neon pooled connection string>
+UPSTASH_REDIS_REST_URL=<Upstash REST URL>
+UPSTASH_REDIS_REST_TOKEN=<Upstash REST token>
+TRUSTACCEPT_REQUIRE_UPSTASH=1
+TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM=<RS256 private key PEM>
+```
 
 ### What is mocked vs real
 
 - **Mocked**: identity (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; Neon and Upstash readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're

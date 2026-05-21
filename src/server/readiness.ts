@@ -1,4 +1,8 @@
 import { loadPublicJwk } from "./receipts";
+import {
+  isSequenceNowWebhookConfigured,
+  isSequenceNowWebhookRequired,
+} from "./notifications";
 import { prisma } from "./prisma";
 import { isPrismaStorage, storageBackend } from "./storageBackend";
 import {
@@ -129,6 +133,24 @@ function checkApprovalTokenSecret(): ReadinessCheck {
   };
 }
 
+function checkSequenceNowWebhook(): ReadinessCheck {
+  if (isSequenceNowWebhookConfigured()) {
+    return {
+      name: "sequencenow_webhook",
+      state: "ok",
+      detail: "SequenceNow webhook URL configured",
+    };
+  }
+
+  return {
+    name: "sequencenow_webhook",
+    state: isSequenceNowWebhookRequired() ? "error" : "skipped",
+    detail: isSequenceNowWebhookRequired()
+      ? "SEQUENCENOW_WEBHOOK_URL is required"
+      : "SequenceNow webhook URL not configured",
+  };
+}
+
 export async function readinessReport(): Promise<ReadinessReport> {
   const checks = await Promise.all([
     checkPrisma(),
@@ -136,6 +158,7 @@ export async function readinessReport(): Promise<ReadinessReport> {
     Promise.resolve(checkReceiptKey()),
     Promise.resolve(checkAuthMode()),
     Promise.resolve(checkApprovalTokenSecret()),
+    Promise.resolve(checkSequenceNowWebhook()),
   ]);
   const status = checks.some((check) => check.state === "error")
     ? "not_ready"

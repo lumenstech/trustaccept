@@ -260,7 +260,7 @@ src/
     auditLogs.ts               # Append-only audit log writer + reader
     evidencePackets.ts         # Packet summary + PDF generator
     leads.ts                   # Lead capture persistence + notification trigger
-    notifications.ts           # Mock notification dispatcher (production: SequenceNow)
+    notifications.ts           # Local log notifications + optional SequenceNow webhook delivery
     csv.ts                     # CSV escaping + risk record CSV builder
     api.ts                     # API route error handler (Zod + auth errors)
 app/api/                       # Route handlers (risk records, decision, csv, pdf, leads, demo)
@@ -323,6 +323,9 @@ install completes without modifying versions.
 | `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` | HMAC secret for hosted approval links | unset |
 | `TRUSTACCEPT_APPROVAL_TOKEN_TTL_SECONDS` | Hosted approval token TTL | `604800` |
 | `TRUSTACCEPT_PUBLIC_BASE_URL` | Optional absolute base URL used when returning signed hosted approval links | unset |
+| `SEQUENCENOW_WEBHOOK_URL` | Optional SequenceNow delivery webhook for leads and decision events | unset |
+| `SEQUENCENOW_WEBHOOK_SECRET` | Optional HMAC secret for signing SequenceNow webhook payloads | unset |
+| `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK` | Set to `1` so `/api/ready` and delivery paths fail when the webhook is missing or failing | `0` |
 | `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` | RS256 private key used to issue approval receipt JWTs | unset |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
@@ -336,6 +339,7 @@ install completes without modifying versions.
   - Receipt signing key derivation. In `NODE_ENV=production`, `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` is required.
   - Demo-auth mode. In `NODE_ENV=production`, `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` is required.
   - Hosted approval token secret. In `NODE_ENV=production`, `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` is required.
+  - Optional SequenceNow webhook delivery; set `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1` to fail closed when webhook delivery is missing or unhealthy.
 
 ### SequenceNow session contract
 
@@ -383,14 +387,17 @@ TRUSTACCEPT_SESSION_KEY_PREFIX=trustaccept:session
 TRUSTACCEPT_APPROVAL_TOKEN_SECRET=<long random secret>
 TRUSTACCEPT_APPROVAL_TOKEN_TTL_SECONDS=604800
 TRUSTACCEPT_PUBLIC_BASE_URL=https://trustaccept.your-domain.example
+SEQUENCENOW_WEBHOOK_URL=<SequenceNow delivery webhook URL>
+SEQUENCENOW_WEBHOOK_SECRET=<shared webhook signing secret>
+TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1
 TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM=<RS256 private key PEM>
 TRUSTACCEPT_DISABLE_DEMO_AUTH=1
 ```
 
 ### What is mocked vs real
 
-- **Mocked**: identity only when demo auth is enabled (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; signed hosted approval links with Upstash-backed consume-on-decision state; Neon and Upstash readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Mocked**: identity only when demo auth is enabled (single demo user, `Owner` role, `demo-org`), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
+- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; signed hosted approval links with Upstash-backed consume-on-decision state; optional SequenceNow webhook delivery for leads and decision events; Neon, Upstash, and delivery readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're

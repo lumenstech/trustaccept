@@ -1,7 +1,7 @@
 import { DEMO_ORGANIZATION_ID } from "@/lib/seed-data";
 import type { Lead, LeadFormType } from "@/lib/types";
 import { recordAuditEvent } from "./auditLogs";
-import { notifyLeadReceived } from "./notifications";
+import { notifyLeadReceived, notifyLeadReceivedAsync } from "./notifications";
 import { getStore } from "./store";
 
 let counter = 0;
@@ -22,6 +22,18 @@ export interface LeadCreateInput {
 }
 
 export function createLead(input: LeadCreateInput): Lead {
+  const lead = persistLead(input);
+  notifyLeadReceived(lead);
+  return lead;
+}
+
+export async function createLeadAsync(input: LeadCreateInput): Promise<Lead> {
+  const lead = persistLead(input);
+  await notifyLeadReceivedAsync(lead);
+  return lead;
+}
+
+function persistLead(input: LeadCreateInput): Lead {
   const lead: Lead = {
     id: generateLeadId(),
     formType: input.formType,
@@ -49,8 +61,6 @@ export function createLead(input: LeadCreateInput): Lead {
       urgency: lead.urgency,
     },
   });
-
-  notifyLeadReceived(lead);
 
   return lead;
 }

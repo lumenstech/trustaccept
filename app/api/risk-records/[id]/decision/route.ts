@@ -3,7 +3,7 @@ import { handleApiError } from "@/src/server/api";
 import { verifyApprovalToken } from "@/src/server/approvalTokens";
 import { requireDecisionAccessAsync } from "@/src/server/auth";
 import { updateRiskRecordDecisionAsync } from "@/src/server/riskRecords";
-import { notifyDecisionRecorded } from "@/src/server/notifications";
+import { notifyDecisionRecordedAsync } from "@/src/server/notifications";
 import { ApprovalDecisionInput } from "@/src/lib/validation";
 
 export async function PATCH(
@@ -16,7 +16,7 @@ export async function PATCH(
     const input = ApprovalDecisionInput.parse(json);
     await verifyApprovalToken(params.id, input.approvalToken, { consume: true });
     const record = await updateRiskRecordDecisionAsync(user, params.id, input);
-    notifyDecisionRecorded(record, user);
+    await notifyDecisionRecordedAsync(record, user);
     return NextResponse.json({ record });
   } catch (err) {
     return handleApiError(err);

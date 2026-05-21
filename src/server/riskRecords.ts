@@ -98,8 +98,8 @@ function ensureOwnedByOrg(
 
 /**
  * Public read by ID, used by the hosted /approve/[id] route which
- * is reachable without authentication. The link itself is the
- * capability in this build; production would carry a signed token.
+ * is reachable without authentication in demo mode. Production callers
+ * must present a signed hosted approval token before this read occurs.
  */
 export function getRiskRecordPublic(id: string): RiskRecord | null {
   return getStore().riskRecords.get(id) ?? null;

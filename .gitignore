@@ -23,6 +23,7 @@ yarn-error.log*
 # misc
 .DS_Store
 *.pem
+!examples/submission-assets/sample-public-key.pem
 .vercel
 .idea
 .vscode

@@ -13,7 +13,7 @@ import { setTimeout as wait } from "node:timers/promises";
 const baseUrl = process.env.TRUSTACCEPT_API_URL ?? "http://localhost:3000";
 const apiKey = process.env.TRUSTACCEPT_API_KEY ?? "";
 
-const server = spawn("node", ["dist/index.js"], {
+const server = spawn("node", ["dist/apps/mcp-server/src/index.js"], {
   env: {
     ...process.env,
     TRUSTACCEPT_API_URL: baseUrl,

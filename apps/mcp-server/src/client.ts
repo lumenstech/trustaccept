@@ -2,7 +2,7 @@ import type {
   ApprovalRecord,
   ApprovalRequestInputType,
   ListPendingApprovalsInputType,
-} from "./schemas.js";
+} from "../../../src/lib/approval-types.js";
 
 export interface ApprovalsClientConfig {
   baseUrl: string;

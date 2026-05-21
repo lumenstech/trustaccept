@@ -3,7 +3,7 @@ import {
   ApprovalRequestInput,
   GetApprovalStatusInput,
   ListPendingApprovalsInput,
-} from "./schemas.js";
+} from "../../../src/lib/approval-types.js";
 
 export interface ToolContent {
   type: "text";

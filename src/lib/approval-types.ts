@@ -80,6 +80,35 @@ export const ApprovalListQueryInput = z.object({
 export type ApprovalListQueryInputType = z.infer<typeof ApprovalListQueryInput>;
 
 /**
+ * MCP tool argument schemas. The wrapper does not need these — it takes
+ * `id` from the URL path and `status` from query params — but the MCP
+ * server invokes these to validate JSON-RPC `tools/call` arguments, and
+ * the input shape must stay in lockstep with the wrapper's contract.
+ *
+ * Lives here (rather than in apps/mcp-server) so both packages share a
+ * single source of truth, preventing the drift that duplication caused
+ * in Block 3.
+ */
+export const GetApprovalStatusInput = z.object({
+  request_id: z.string().min(1).max(SOURCE_REF_EXTERNAL_ID_MAX),
+});
+export type GetApprovalStatusInputType = z.infer<typeof GetApprovalStatusInput>;
+
+/**
+ * Same intent as `ApprovalListQueryInput` but accepts native numbers
+ * from JSON-RPC instead of coercing query strings. `status` is always
+ * "pending" for this MCP tool, so it is not part of the input.
+ */
+export const ListPendingApprovalsInput = z.object({
+  principal_type: PrincipalTypeEnum.optional(),
+  principal_value: z.string().min(1).max(SOURCE_REF_EXTERNAL_ID_MAX).optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+export type ListPendingApprovalsInputType = z.infer<
+  typeof ListPendingApprovalsInput
+>;
+
+/**
  * Locked output shape. Every reserved-for-later field is present from Day 1
  * with a `null` default until the block that populates it ships. MCP clients
  * can rely on the keys existing across the entire MVP timeline.

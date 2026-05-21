@@ -110,12 +110,32 @@ function checkAuthMode(): ReadinessCheck {
   };
 }
 
+function checkApprovalTokenSecret(): ReadinessCheck {
+  if (process.env.TRUSTACCEPT_APPROVAL_TOKEN_SECRET) {
+    return {
+      name: "approval_token_secret",
+      state: "ok",
+      detail: "approval token signing secret configured",
+    };
+  }
+
+  return {
+    name: "approval_token_secret",
+    state: process.env.NODE_ENV === "production" ? "error" : "skipped",
+    detail:
+      process.env.NODE_ENV === "production"
+        ? "TRUSTACCEPT_APPROVAL_TOKEN_SECRET is required in production"
+        : "approval token secret not configured",
+  };
+}
+
 export async function readinessReport(): Promise<ReadinessReport> {
   const checks = await Promise.all([
     checkPrisma(),
     checkUpstash(),
     Promise.resolve(checkReceiptKey()),
     Promise.resolve(checkAuthMode()),
+    Promise.resolve(checkApprovalTokenSecret()),
   ]);
   const status = checks.some((check) => check.state === "error")
     ? "not_ready"

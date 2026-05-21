@@ -11,7 +11,13 @@ import { getApprovalLabels } from "@/lib/access";
 import { nextStepFor, type DecisionAction } from "@/lib/decision";
 import type { RiskRecord } from "@/lib/types";
 
-export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }) {
+export function DecisionActions({
+  initialRecord,
+  approvalToken,
+}: {
+  initialRecord: RiskRecord;
+  approvalToken?: string;
+}) {
   const [record, setRecord] = useState<RiskRecord>(initialRecord);
   const [lastAction, setLastAction] = useState<DecisionAction | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
@@ -31,6 +37,7 @@ export function DecisionActions({ initialRecord }: { initialRecord: RiskRecord }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
+          approvalToken,
           decisionNote: decisionNote.length > 0 ? decisionNote : undefined,
           compensatingControlsNote:
             compensatingControlsNote.length > 0 ? compensatingControlsNote : undefined,

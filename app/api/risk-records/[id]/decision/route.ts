@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
+import { verifyApprovalToken } from "@/src/server/approvalTokens";
 import { requireDecisionAccessAsync } from "@/src/server/auth";
 import { updateRiskRecordDecisionAsync } from "@/src/server/riskRecords";
 import { notifyDecisionRecorded } from "@/src/server/notifications";
@@ -13,6 +14,7 @@ export async function PATCH(
     const user = await requireDecisionAccessAsync();
     const json = await req.json();
     const input = ApprovalDecisionInput.parse(json);
+    await verifyApprovalToken(params.id, input.approvalToken, { consume: true });
     const record = await updateRiskRecordDecisionAsync(user, params.id, input);
     notifyDecisionRecorded(record, user);
     return NextResponse.json({ record });

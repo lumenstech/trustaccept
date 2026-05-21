@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/site/logo";
 import { DecisionActions } from "@/components/risk/decision-actions";
 import { getModule } from "@/lib/modules";
+import { verifyApprovalToken } from "@/src/server/approvalTokens";
 import { getRiskRecordPublicAsync } from "@/src/server/riskRecords";
 import type { SourceReference } from "@/lib/types";
 
@@ -26,7 +27,14 @@ function findRefValue(refs: SourceReference[], label: string): string | null {
   return refs.find((r) => r.label === label)?.externalId ?? null;
 }
 
-export default async function ApprovePage({ params }: { params: { id: string } }) {
+export default async function ApprovePage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { token?: string };
+}) {
+  await verifyApprovalToken(params.id, searchParams?.token);
   const record = await getRiskRecordPublicAsync(params.id);
   if (!record) notFound();
 
@@ -72,7 +80,7 @@ export default async function ApprovePage({ params }: { params: { id: string } }
               <p className="mt-3 text-base text-muted-foreground">{record.description}</p>
             </div>
 
-            <DecisionActions initialRecord={record} />
+            <DecisionActions initialRecord={record} approvalToken={searchParams?.token} />
 
             {hasPolicyContext ? (
               <Card>

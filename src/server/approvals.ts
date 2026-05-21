@@ -16,6 +16,7 @@ import {
   type PolicyEvaluation,
 } from "./policies";
 import { issueReceipt } from "./receipts";
+import { approvalUrl, createStoredApprovalToken } from "./approvalTokens";
 import type {
   ApprovalListQueryInputType,
   ApprovalRecord,
@@ -268,13 +269,26 @@ export async function createApprovalAsync(
   caller: SessionUser,
   input: ApprovalRequestInputType,
 ): Promise<ApprovalRecord> {
+  const result = await createApprovalWithDeliveryAsync(caller, input);
+  return result.approval;
+}
+
+export async function createApprovalWithDeliveryAsync(
+  caller: SessionUser,
+  input: ApprovalRequestInputType,
+): Promise<{ approval: ApprovalRecord; approval_url: string | null }> {
   const policy = evaluateApprovalPolicy(input);
   const actionHash = hashAction(input.action);
   const data = buildCreateData(input, policy, actionHash);
   const created = await createRiskRecordAsync(caller, data);
 
   if (policy.decision === "require_approval") {
-    return toApprovalRecord(created);
+    const approval = toApprovalRecord(created);
+    const token = await createStoredApprovalToken(created.id);
+    return {
+      approval,
+      approval_url: token ? approvalUrl(created.id, token) : null,
+    };
   }
 
   const actor = syntheticPolicyActor(caller, policy.policy_id);
@@ -282,7 +296,7 @@ export async function createApprovalAsync(
     action: policy.decision === "allow" ? "accept" : "reject",
     decisionNote: policy.reason,
   });
-  return toApprovalRecord(finalized);
+  return { approval: toApprovalRecord(finalized), approval_url: null };
 }
 
 export function getApproval(

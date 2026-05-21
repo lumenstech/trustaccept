@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleApiError } from "@/src/server/api";
 import { requireDashboardAccessAsync } from "@/src/server/auth";
-import { createApprovalAsync, listApprovalsAsync } from "@/src/server/approvals";
+import {
+  createApprovalWithDeliveryAsync,
+  listApprovalsAsync,
+} from "@/src/server/approvals";
 import {
   ApprovalListQueryInput,
   ApprovalRequestInput,
@@ -12,8 +15,8 @@ export async function POST(req: NextRequest) {
     const user = await requireDashboardAccessAsync();
     const json = await req.json();
     const input = ApprovalRequestInput.parse(json);
-    const approval = await createApprovalAsync(user, input);
-    return NextResponse.json({ approval }, { status: 201 });
+    const result = await createApprovalWithDeliveryAsync(user, input);
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return handleApiError(err);
   }

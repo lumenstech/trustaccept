@@ -320,6 +320,9 @@ install completes without modifying versions.
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | unset |
 | `TRUSTACCEPT_REQUIRE_UPSTASH` | Set to `1` so `/api/ready` fails when Upstash is missing or unreachable | `0` |
 | `TRUSTACCEPT_SESSION_KEY_PREFIX` | Upstash key prefix for SequenceNow session records | `trustaccept:session` |
+| `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` | HMAC secret for hosted approval links | unset |
+| `TRUSTACCEPT_APPROVAL_TOKEN_TTL_SECONDS` | Hosted approval token TTL | `604800` |
+| `TRUSTACCEPT_PUBLIC_BASE_URL` | Optional absolute base URL used when returning signed hosted approval links | unset |
 | `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` | RS256 private key used to issue approval receipt JWTs | unset |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
@@ -332,6 +335,7 @@ install completes without modifying versions.
   - Upstash Redis when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set; set `TRUSTACCEPT_REQUIRE_UPSTASH=1` to fail closed when Redis is missing.
   - Receipt signing key derivation. In `NODE_ENV=production`, `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` is required.
   - Demo-auth mode. In `NODE_ENV=production`, `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` is required.
+  - Hosted approval token secret. In `NODE_ENV=production`, `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` is required.
 
 ### SequenceNow session contract
 
@@ -355,6 +359,18 @@ The value must be JSON matching the server `SessionUser` shape:
 
 Allowed roles are `OWNER`, `ADMIN`, `APPROVER`, and `VIEWER`. Dashboard/API reads allow all four roles; decision writes require `OWNER`, `ADMIN`, or `APPROVER`.
 
+### Hosted approval link contract
+
+In demo mode, `/approve/<id>` remains open so marketing/demo links keep working. In production (`TRUSTACCEPT_DISABLE_DEMO_AUTH=1`), hosted approval pages require:
+
+```text
+/approve/<id>?token=<approval-token>
+```
+
+The token is HMAC-signed with `TRUSTACCEPT_APPROVAL_TOKEN_SECRET`, bound to the approval id, checked against Upstash, and consumed on the decision `PATCH`. This removes the bare capability URL pattern from the production path.
+
+`POST /api/v1/approvals` returns the existing MCP-facing `approval` object plus an optional top-level `approval_url`. The MCP wrapper still returns only `approval`, while production delivery systems can use `approval_url` for SMS, email, or portal notifications.
+
 For the SequenceNow production project, set:
 
 ```bash
@@ -364,6 +380,9 @@ UPSTASH_REDIS_REST_URL=<Upstash REST URL>
 UPSTASH_REDIS_REST_TOKEN=<Upstash REST token>
 TRUSTACCEPT_REQUIRE_UPSTASH=1
 TRUSTACCEPT_SESSION_KEY_PREFIX=trustaccept:session
+TRUSTACCEPT_APPROVAL_TOKEN_SECRET=<long random secret>
+TRUSTACCEPT_APPROVAL_TOKEN_TTL_SECONDS=604800
+TRUSTACCEPT_PUBLIC_BASE_URL=https://trustaccept.your-domain.example
 TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM=<RS256 private key PEM>
 TRUSTACCEPT_DISABLE_DEMO_AUTH=1
 ```
@@ -371,7 +390,7 @@ TRUSTACCEPT_DISABLE_DEMO_AUTH=1
 ### What is mocked vs real
 
 - **Mocked**: identity only when demo auth is enabled (single demo user, `Owner` role, `demo-org`), notification delivery (logs to stdout instead of SequenceNow), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; Neon and Upstash readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; signed hosted approval links with Upstash-backed consume-on-decision state; Neon and Upstash readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're

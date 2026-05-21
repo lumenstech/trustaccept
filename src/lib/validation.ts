@@ -96,6 +96,7 @@ export type RiskRecordUpdateInputType = z.infer<typeof RiskRecordUpdateInput>;
 
 export const ApprovalDecisionInput = z.object({
   action: z.enum(["accept", "reject", "remediate"]),
+  approvalToken: z.string().max(500).optional(),
   decisionNote: z.string().max(2000).optional(),
   compensatingControlsNote: z.string().max(2000).optional(),
   reviewDate: isoDate,

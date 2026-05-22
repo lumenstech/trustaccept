@@ -15,8 +15,10 @@ import {
   evaluateApprovalPolicy,
   type PolicyEvaluation,
 } from "./policies";
+import { ForbiddenError } from "./auth";
 import { issueReceipt } from "./receipts";
 import { approvalUrl, createStoredApprovalToken } from "./approvalTokens";
+import { isToolAllowed } from "./toolAllowlist";
 import type {
   ApprovalListQueryInputType,
   ApprovalRecord,
@@ -127,6 +129,12 @@ function buildSourceReferences(
     externalId: actionHash,
   });
   return refs;
+}
+
+function requireAllowedTool(input: ApprovalRequestInputType): void {
+  if (!isToolAllowed(input.tool_id)) {
+    throw new ForbiddenError("Tool is not allowed to request approvals");
+  }
 }
 
 function buildCreateData(
@@ -248,6 +256,7 @@ export function createApproval(
   caller: SessionUser,
   input: ApprovalRequestInputType,
 ): ApprovalRecord {
+  requireAllowedTool(input);
   const policy = evaluateApprovalPolicy(input);
   const actionHash = hashAction(input.action);
   const data = buildCreateData(input, policy, actionHash);
@@ -277,6 +286,7 @@ export async function createApprovalWithDeliveryAsync(
   caller: SessionUser,
   input: ApprovalRequestInputType,
 ): Promise<{ approval: ApprovalRecord; approval_url: string | null }> {
+  requireAllowedTool(input);
   const policy = evaluateApprovalPolicy(input);
   const actionHash = hashAction(input.action);
   const data = buildCreateData(input, policy, actionHash);

@@ -124,7 +124,8 @@ export const TOOL_DEFINITIONS = [
         tool_id: {
           type: "string",
           maxLength: 120,
-          description: "Reserved for future tool allowlist enforcement.",
+          description:
+            "Caller tool identifier. When TRUSTACCEPT_ALLOWED_TOOL_IDS is configured, this value must appear in that comma-separated allowlist.",
         },
       },
       required: ["action", "principal"],

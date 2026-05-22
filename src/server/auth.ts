@@ -84,8 +84,8 @@ async function getSessionUserFromUpstash(token: string): Promise<SessionUser | n
 /**
  * Demo-mode auth. Returns a stable demo user so the dashboard and
  * service layer are exercised end-to-end without a real identity
- * provider. Production should swap this for a real session lookup
- * delivered via SequenceNow.
+ * provider. Production requests use getCurrentUserAsync(), which resolves
+ * SequenceNow-issued ta_session cookies through Upstash.
  */
 export function getCurrentUser(): SessionUser | null {
   const user = getStore().users.get(DEMO_USER_ID);

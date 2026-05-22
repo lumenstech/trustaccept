@@ -23,6 +23,7 @@ import { GET as approvalByIdGet } from "@/app/api/v1/approvals/[id]/route";
 beforeEach(() => {
   __resetStoreForTests();
   __resetNotificationsForTests();
+  delete process.env.TRUSTACCEPT_ALLOWED_TOOL_IDS;
 });
 
 const baseRequest = (): ApprovalRequestInputType => ({
@@ -173,6 +174,32 @@ describe("createApproval — service layer", () => {
     expect(serialized).not.toContain("checkout-api");
   });
 
+  it("allows configured MCP tool ids when the allowlist is set", () => {
+    process.env.TRUSTACCEPT_ALLOWED_TOOL_IDS =
+      "trustaccept.request_approval.v1, trustaccept.release_gate.v1";
+    const user = requireCurrentUser();
+
+    const approval = createApproval(user, baseRequest());
+
+    expect(approval.tool_id).toBe("trustaccept.request_approval.v1");
+    expect(approval.status).toBe("pending");
+  });
+
+  it("rejects missing or unlisted MCP tool ids when the allowlist is set", () => {
+    process.env.TRUSTACCEPT_ALLOWED_TOOL_IDS = "trustaccept.release_gate.v1";
+    const user = requireCurrentUser();
+
+    expect(() => createApproval(user, baseRequest())).toThrow(
+      "Tool is not allowed to request approvals",
+    );
+    expect(() =>
+      createApproval(user, {
+        ...baseRequest(),
+        tool_id: undefined,
+      }),
+    ).toThrow("Tool is not allowed to request approvals");
+  });
+
 });
 
 describe("listApprovals — filtering", () => {
@@ -283,6 +310,19 @@ describe("POST /api/v1/approvals — route handler", () => {
     const body = await res.json();
     expect(body.error).toBe("validation_failed");
     expect(Array.isArray(body.issues)).toBe(true);
+  });
+
+  it("returns 403 when tool_id is not in the configured allowlist", async () => {
+    process.env.TRUSTACCEPT_ALLOWED_TOOL_IDS = "trustaccept.release_gate.v1";
+    const req = new NextRequest("http://localhost/api/v1/approvals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(baseRequest()),
+    });
+    const res = await approvalsPost(req);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe("Tool is not allowed to request approvals");
   });
 });
 

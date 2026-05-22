@@ -62,6 +62,7 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ci-upstash-token
           TRUSTACCEPT_SESSION_KEY_PREFIX: trustaccept:session
           TRUSTACCEPT_APPROVAL_TOKEN_SECRET: ci-approval-token-secret-32-chars
+          TRUSTACCEPT_ALLOWED_TOOL_IDS: trustaccept.request_approval.v1
           TRUSTACCEPT_PUBLIC_BASE_URL: https://trustaccept.example.invalid
           TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM: |-
             -----BEGIN PRIVATE KEY-----

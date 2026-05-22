@@ -95,6 +95,14 @@ function validateEnv() {
     "at least 32 characters recommended for hosted approval HMAC tokens",
   );
   add(
+    "TRUSTACCEPT_ALLOWED_TOOL_IDS",
+    env("TRUSTACCEPT_ALLOWED_TOOL_IDS")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean).length > 0,
+    "comma-separated MCP tool id allowlist required",
+  );
+  add(
     "TRUSTACCEPT_PUBLIC_BASE_URL",
     isHttpsUrl(env("TRUSTACCEPT_PUBLIC_BASE_URL")),
     "HTTPS public base URL required for deliverable approval links",

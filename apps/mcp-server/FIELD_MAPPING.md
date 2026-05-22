@@ -39,7 +39,7 @@ request_approval({
 | `context.resource` | `sourceReferences[]` as `{ system: "trustaccept", label: "Resource", externalId: resource }` | Optional. |
 | `context.business_justification` | `RiskRecord.businessJustification` (first-class long text, `min(1).max(4000)`) | If absent, wrapper defaults to a templated sentence (`"Submitted via TrustAccept MCP by {agent_name or 'agent'}. No business justification provided."`) to satisfy the `min(1)` Zod constraint. |
 | `context.metadata` | **Deferred to post-MVP.** Not persisted. | Document in MCP tool description that metadata is accepted but not retained in the MVP. Future block can add a `Json` column or splat selected metadata into `sourceReferences[]`. |
-| `tool_id` | `sourceReferences[]` as `{ system: "trustaccept", label: "Tool ID", externalId: tool_id }` | Reserved for future allowlist enforcement (Block 5b: only the reservation; enforcement is post-MVP). |
+| `tool_id` | `sourceReferences[]` as `{ system: "trustaccept", label: "Tool ID", externalId: tool_id }` | Enforced before persistence when `TRUSTACCEPT_ALLOWED_TOOL_IDS` is configured. The env var is a comma-separated list; requests with missing or unlisted `tool_id` fail with 403. |
 
 ### Wrapper-supplied static fields (required by `RiskRecordCreateInput` Zod schema)
 

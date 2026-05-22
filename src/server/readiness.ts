@@ -10,6 +10,11 @@ import {
   isUpstashRequired,
   pingUpstash,
 } from "./upstash";
+import {
+  allowedToolIds,
+  isToolAllowlistConfigured,
+  toolAllowlistEnvName,
+} from "./toolAllowlist";
 
 export type ReadinessState = "ok" | "skipped" | "error";
 
@@ -151,6 +156,25 @@ function checkSequenceNowWebhook(): ReadinessCheck {
   };
 }
 
+function checkToolAllowlist(): ReadinessCheck {
+  if (isToolAllowlistConfigured()) {
+    return {
+      name: "tool_allowlist",
+      state: "ok",
+      detail: `${allowedToolIds().length} allowed tool id(s) configured`,
+    };
+  }
+
+  return {
+    name: "tool_allowlist",
+    state: process.env.NODE_ENV === "production" ? "error" : "skipped",
+    detail:
+      process.env.NODE_ENV === "production"
+        ? `${toolAllowlistEnvName()} is required in production`
+        : "tool allowlist not configured",
+  };
+}
+
 export async function readinessReport(): Promise<ReadinessReport> {
   const checks = await Promise.all([
     checkPrisma(),
@@ -159,6 +183,7 @@ export async function readinessReport(): Promise<ReadinessReport> {
     Promise.resolve(checkAuthMode()),
     Promise.resolve(checkApprovalTokenSecret()),
     Promise.resolve(checkSequenceNowWebhook()),
+    Promise.resolve(checkToolAllowlist()),
   ]);
   const status = checks.some((check) => check.state === "error")
     ? "not_ready"

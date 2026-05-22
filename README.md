@@ -341,6 +341,7 @@ install completes without modifying versions.
 | `TRUSTACCEPT_SESSION_KEY_PREFIX` | Upstash key prefix for SequenceNow session records | `trustaccept:session` |
 | `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` | HMAC secret for hosted approval links | unset |
 | `TRUSTACCEPT_APPROVAL_TOKEN_TTL_SECONDS` | Hosted approval token TTL | `604800` |
+| `TRUSTACCEPT_ALLOWED_TOOL_IDS` | Comma-separated MCP `tool_id` allowlist; required in production and enforced before approval records are persisted | unset |
 | `TRUSTACCEPT_PUBLIC_BASE_URL` | Optional absolute base URL used when returning signed hosted approval links | unset |
 | `SEQUENCENOW_WEBHOOK_URL` | Optional SequenceNow delivery webhook for leads and decision events | unset |
 | `SEQUENCENOW_WEBHOOK_SECRET` | Optional HMAC secret for signing SequenceNow webhook payloads | unset |
@@ -352,7 +353,7 @@ install completes without modifying versions.
 
 ### Production readiness checks
 
-- `npm run verify:prod` is the deploy preflight. It fails unless production env is strict: Prisma storage, Neon `DATABASE_URL`, demo auth disabled, Upstash required/configured, approval token secret present, public base URL HTTPS, receipt private key present, and SequenceNow webhook required/configured.
+- `npm run verify:prod` is the deploy preflight. It fails unless production env is strict: Prisma storage, Neon `DATABASE_URL`, demo auth disabled, Upstash required/configured, approval token secret present, MCP tool allowlist configured, public base URL HTTPS, receipt private key present, and SequenceNow webhook required/configured.
 - Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health` and `/api/ready`.
 - `GET /api/health` is a liveness check and returns `200` when the process is up.
 - `GET /api/ready` checks the production dependencies that are configured:
@@ -361,6 +362,7 @@ install completes without modifying versions.
   - Receipt signing key derivation. In `NODE_ENV=production`, `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` is required.
   - Demo-auth mode. In `NODE_ENV=production`, `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` is required.
   - Hosted approval token secret. In `NODE_ENV=production`, `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` is required.
+  - MCP tool allowlist. In `NODE_ENV=production`, `TRUSTACCEPT_ALLOWED_TOOL_IDS` is required.
   - Optional SequenceNow webhook delivery; set `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1` to fail closed when webhook delivery is missing or unhealthy.
 
 ### SequenceNow session contract
@@ -408,6 +410,7 @@ TRUSTACCEPT_REQUIRE_UPSTASH=1
 TRUSTACCEPT_SESSION_KEY_PREFIX=trustaccept:session
 TRUSTACCEPT_APPROVAL_TOKEN_SECRET=<long random secret>
 TRUSTACCEPT_APPROVAL_TOKEN_TTL_SECONDS=604800
+TRUSTACCEPT_ALLOWED_TOOL_IDS=trustaccept.request_approval.v1
 TRUSTACCEPT_PUBLIC_BASE_URL=https://trustaccept.your-domain.example
 SEQUENCENOW_WEBHOOK_URL=<SequenceNow delivery webhook URL>
 SEQUENCENOW_WEBHOOK_SECRET=<shared webhook signing secret>

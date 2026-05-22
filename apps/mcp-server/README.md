@@ -30,6 +30,7 @@ Environment variables:
 |---|---|---|
 | `TRUSTACCEPT_API_URL` | `http://localhost:3000` | Base URL of the Next.js app that hosts `/api/v1/approvals`. |
 | `TRUSTACCEPT_API_KEY` | (unset) | Sent as `Cookie: ta_session=<key>`. Optional in demo mode; the wrapper's middleware accepts the demo session implicitly. |
+| `TRUSTACCEPT_ALLOWED_TOOL_IDS` | (unset) | Configured on the web app, not the MCP process. When set, `request_approval.tool_id` must match one of the comma-separated values. |
 
 The server runs only on stdio for the MVP. Streamable HTTP is a post-MVP stretch goal per the marketplace plan.
 
@@ -78,4 +79,4 @@ The smoke script prints every JSON-RPC frame (client→server, server→client) 
 - Receipt issuance (Block 5 — `src/server/receipts.ts`)
 - Real auth (Block X — passthrough cookie only in the MVP)
 - Streamable HTTP transport (post-MVP)
-- Tool allowlist enforcement (post-MVP — `tool_id` is reserved but not checked)
+- Tool identity issuance. The web app enforces `tool_id` when `TRUSTACCEPT_ALLOWED_TOOL_IDS` is configured; the MCP process only forwards caller input.

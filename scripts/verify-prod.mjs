@@ -80,6 +80,37 @@ async function checkJsonEndpoint(baseUrl, path, validate) {
   }
 }
 
+async function checkSecurityHeaders(baseUrl) {
+  const url = `${baseUrl.replace(/\/$/, "")}/api/health`;
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const requiredHeaders = {
+      "strict-transport-security": "max-age=",
+      "content-security-policy": "default-src 'self'",
+      "x-frame-options": "DENY",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
+    };
+    const missing = Object.entries(requiredHeaders).filter(([name, expected]) => {
+      const value = res.headers.get(name) ?? "";
+      return !value.toLowerCase().includes(expected.toLowerCase());
+    });
+    add(
+      "endpoint security headers",
+      missing.length === 0,
+      missing.length === 0
+        ? "required headers present"
+        : `missing or invalid: ${missing.map(([name]) => name).join(", ")}`,
+    );
+  } catch (err) {
+    add(
+      "endpoint security headers",
+      false,
+      err instanceof Error ? err.message : "request failed",
+    );
+  }
+}
+
 function validateEnv() {
   add(
     "NODE_ENV",
@@ -198,6 +229,7 @@ async function main() {
               : `expected RS256 JWKS key, got HTTP ${status}: ${JSON.stringify(body).slice(0, 500)}`,
         };
       });
+      await checkSecurityHeaders(target);
     }
   } else {
     add(

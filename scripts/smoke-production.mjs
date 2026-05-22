@@ -74,6 +74,20 @@ async function checkJwks() {
   record("jwks", hasSigningKey, `${keys.length} key(s) returned`);
 }
 
+async function checkProtectedApiClosed() {
+  if (env("TRUSTACCEPT_SMOKE_SESSION_TOKEN")) {
+    record("api_auth_boundary", true, "skipped; smoke session token provided");
+    return;
+  }
+
+  const body = await getJson("/api/v1/approvals", 401);
+  record(
+    "api_auth_boundary",
+    body.error === "Authentication required",
+    body.error ?? "missing expected auth error",
+  );
+}
+
 function smokeToolId() {
   const allowed = env("TRUSTACCEPT_ALLOWED_TOOL_IDS")
     .split(",")
@@ -146,6 +160,7 @@ async function main() {
   await runCheck("health", checkHealth);
   await runCheck("readiness", checkReadiness);
   await runCheck("jwks", checkJwks);
+  await runCheck("api_auth_boundary", checkProtectedApiClosed);
   await runCheck("approval_create", runApprovalCreate);
 
   const failed = checks.filter((check) => !check.ok);

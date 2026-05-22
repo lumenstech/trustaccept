@@ -304,7 +304,7 @@ npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
 npm run verify:prod       # strict production env preflight; set TRUSTACCEPT_VERIFY_TARGET_URL to hit /api/health + /api/ready
-npm run smoke:prod        # deployed smoke check for /api/health, /api/ready, JWKS, and optional approval create
+npm run smoke:prod        # deployed smoke check for health, readiness, JWKS, API auth boundary, and optional approval create
 ```
 
 If `npm install` fails with `ETARGET No matching version found for hasown@^2.0.3`
@@ -371,7 +371,7 @@ install completes without modifying versions.
 ### Production readiness checks
 
 - `npm run verify:prod` is the deploy preflight. It fails unless production env is strict: Prisma storage, Neon `DATABASE_URL`, demo auth disabled, Upstash required/configured, approval token secret present, MCP tool allowlist configured, public base URL HTTPS, receipt private key present, and SequenceNow webhook required/configured.
-- Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health`, `/api/ready`, and `/.well-known/jwks.json`.
+- Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health`, `/api/ready`, `/.well-known/jwks.json`, and verify required security headers.
 - `GET /api/health` is a liveness check and returns `200` when the process is up.
 - `GET /api/ready` checks the production dependencies that are configured:
   - Neon/Postgres via Prisma when `TRUSTACCEPT_STORAGE_BACKEND=prisma`.
@@ -381,6 +381,7 @@ install completes without modifying versions.
   - Hosted approval token secret. In `NODE_ENV=production`, `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` is required.
   - MCP tool allowlist. In `NODE_ENV=production`, `TRUSTACCEPT_ALLOWED_TOOL_IDS` is required.
   - Optional SequenceNow webhook delivery; set `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1` to fail closed when webhook delivery is missing or unhealthy.
+- When demo auth is disabled, protected dashboard pages without `ta_session` redirect to `/`, while protected API routes return JSON `401` so MCP/API clients can fail cleanly.
 
 ### SequenceNow session contract
 

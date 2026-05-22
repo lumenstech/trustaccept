@@ -52,6 +52,9 @@ describe("scripts/smoke-production.mjs", () => {
       if (req.url === "/.well-known/jwks.json") {
         return json(res, 200, { keys: [{ kid: "k1", alg: "RS256" }] });
       }
+      if (req.url === "/api/v1/approvals") {
+        return json(res, 401, { error: "Authentication required" });
+      }
       return json(res, 404, { error: "not found" });
     }, async (baseUrl) => {
       const { stdout } = await execFileAsync(
@@ -66,8 +69,9 @@ describe("scripts/smoke-production.mjs", () => {
       expect(stdout).toContain("ok   health");
       expect(stdout).toContain("ok   readiness");
       expect(stdout).toContain("ok   jwks");
+      expect(stdout).toContain("ok   api_auth_boundary");
       expect(stdout).toContain("ok   approval_create - skipped");
-      expect(stdout).toContain("summary: 4/4 passed");
+      expect(stdout).toContain("summary: 5/5 passed");
     });
   });
 
@@ -81,6 +85,7 @@ describe("scripts/smoke-production.mjs", () => {
         });
       }
       if (req.url === "/.well-known/jwks.json") return json(res, 200, { keys: [] });
+      if (req.url === "/api/v1/approvals") return json(res, 200, { approvals: [] });
       return json(res, 404, { error: "not found" });
     }, async (baseUrl) => {
       await expect(
@@ -89,7 +94,7 @@ describe("scripts/smoke-production.mjs", () => {
           env: smokeEnv(baseUrl),
         }),
       ).rejects.toMatchObject({
-        stdout: expect.stringContaining("summary: 1/4 passed"),
+        stdout: expect.stringContaining("summary: 1/5 passed"),
       });
     });
   });

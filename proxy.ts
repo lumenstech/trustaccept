@@ -21,6 +21,13 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (isProtectedApi(pathname)) {
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 },
+    );
+  }
+
   const redirectUrl = req.nextUrl.clone();
   redirectUrl.pathname = "/";
   redirectUrl.searchParams.set("reason", "signin-required");
@@ -34,6 +41,10 @@ function isProtected(pathname: string): boolean {
   if (pathname.startsWith("/api/demo/")) return true;
   if (pathname.startsWith("/api/v1/")) return true;
   return false;
+}
+
+function isProtectedApi(pathname: string): boolean {
+  return pathname.startsWith("/api/");
 }
 
 function hasDemoOrRealSession(req: NextRequest): boolean {

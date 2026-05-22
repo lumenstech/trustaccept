@@ -304,6 +304,7 @@ npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
 npm run verify:prod       # strict production env preflight; set TRUSTACCEPT_VERIFY_TARGET_URL to hit /api/health + /api/ready
+npm run smoke:prod        # deployed smoke check for /api/health, /api/ready, JWKS, and optional approval create
 ```
 
 If `npm install` fails with `ETARGET No matching version found for hasown@^2.0.3`
@@ -324,10 +325,23 @@ install completes without modifying versions.
 ### Container deployment
 
 - The app builds as a Next.js standalone server (`output: "standalone"`).
+- Use `.env.production.example` as the deployment secret checklist. Copy values into the platform secret store; do not commit `.env.production`.
 - Build the runtime image with `docker build --target runner -t trustaccept-web .`.
 - Run database migrations before shifting traffic with `docker build --target migrator -t trustaccept-migrator .` followed by `docker run --rm --env-file .env.production trustaccept-migrator`.
 - Run the web container with `docker run --rm --env-file .env.production -p 3000:3000 trustaccept-web`.
 - The runtime container starts `node server.js` as an unprivileged user and expects health checks on `/api/health` and readiness checks on `/api/ready`.
+
+### Production cutover runbook
+
+1. Provision Neon, Upstash, the SequenceNow webhook, and the production HTTPS domain.
+2. Install the `.env.production.example` variables in the deployment secret store.
+3. Run `npm run verify:prod` locally or in CI with the production secret set.
+4. Run `npm run prisma:migrate:deploy` against the production Neon database.
+5. Deploy the `runner` container and wait for platform health checks.
+6. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run verify:prod`.
+7. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run smoke:prod`.
+8. Optionally verify the authenticated approval path by setting `TRUSTACCEPT_SMOKE_CREATE_APPROVAL=1` and `TRUSTACCEPT_SMOKE_SESSION_TOKEN=<SequenceNow ta_session value>` before `npm run smoke:prod`.
+9. Send one internal SequenceNow-delivered approval and verify the returned receipt with `examples/verify-receipt`.
 
 ### Environment variables
 
@@ -350,6 +364,8 @@ install completes without modifying versions.
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make the route proxy reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
 | `TRUSTACCEPT_VERIFY_TARGET_URL` | Optional deployed base URL for `npm run verify:prod` live checks | unset |
+| `TRUSTACCEPT_SMOKE_SESSION_TOKEN` | Optional production `ta_session` value used only by `npm run smoke:prod` when authenticated approval creation is enabled | unset |
+| `TRUSTACCEPT_SMOKE_CREATE_APPROVAL` | Set to `1` to let `npm run smoke:prod` create a low-risk smoke approval through `/api/v1/approvals` | `0` |
 
 ### Production readiness checks
 

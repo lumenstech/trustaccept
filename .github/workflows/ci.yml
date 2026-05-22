@@ -120,3 +120,6 @@ jobs:
 
       - name: Check receipt verifier syntax
         run: node --check examples/verify-receipt/verify.mjs
+
+      - name: Check production smoke syntax
+        run: node --check scripts/smoke-production.mjs

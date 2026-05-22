@@ -1,0 +1,96 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { beforeEach, describe, expect, it } from "vitest";
+
+const execFileAsync = promisify(execFile);
+
+function json(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+async function withServer(
+  handler: (req: IncomingMessage, res: ServerResponse) => void,
+  run: (baseUrl: string) => Promise<void>,
+): Promise<void> {
+  const server = createServer(handler);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    server.close();
+    throw new Error("test server did not bind to a TCP port");
+  }
+  try {
+    await run(`http://127.0.0.1:${address.port}`);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  }
+}
+
+function smokeEnv(baseUrl: string): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    TRUSTACCEPT_VERIFY_TARGET_URL: baseUrl,
+    TRUSTACCEPT_ALLOWED_TOOL_IDS: "trustaccept.request_approval.v1",
+    TRUSTACCEPT_SMOKE_CREATE_APPROVAL: "0",
+  };
+}
+
+describe("scripts/smoke-production.mjs", () => {
+  beforeEach(() => {
+    delete process.env.TRUSTACCEPT_VERIFY_TARGET_URL;
+    delete process.env.TRUSTACCEPT_PUBLIC_BASE_URL;
+  });
+
+  it("passes health, readiness, JWKS, and skipped approval checks", async () => {
+    await withServer((req, res) => {
+      if (req.url === "/api/health") return json(res, 200, { status: "ok" });
+      if (req.url === "/api/ready") return json(res, 200, { status: "ok", checks: [] });
+      if (req.url === "/.well-known/jwks.json") {
+        return json(res, 200, { keys: [{ kid: "k1", alg: "RS256" }] });
+      }
+      return json(res, 404, { error: "not found" });
+    }, async (baseUrl) => {
+      const { stdout } = await execFileAsync(
+        process.execPath,
+        ["scripts/smoke-production.mjs"],
+        {
+          cwd: process.cwd(),
+          env: smokeEnv(baseUrl),
+        },
+      );
+
+      expect(stdout).toContain("ok   health");
+      expect(stdout).toContain("ok   readiness");
+      expect(stdout).toContain("ok   jwks");
+      expect(stdout).toContain("ok   approval_create - skipped");
+      expect(stdout).toContain("summary: 4/4 passed");
+    });
+  });
+
+  it("reports all failed checks instead of stopping after the first failure", async () => {
+    await withServer((req, res) => {
+      if (req.url === "/api/health") return json(res, 500, { status: "down" });
+      if (req.url === "/api/ready") {
+        return json(res, 503, {
+          status: "not_ready",
+          checks: [{ name: "upstash_redis", state: "error" }],
+        });
+      }
+      if (req.url === "/.well-known/jwks.json") return json(res, 200, { keys: [] });
+      return json(res, 404, { error: "not found" });
+    }, async (baseUrl) => {
+      await expect(
+        execFileAsync(process.execPath, ["scripts/smoke-production.mjs"], {
+          cwd: process.cwd(),
+          env: smokeEnv(baseUrl),
+        }),
+      ).rejects.toMatchObject({
+        stdout: expect.stringContaining("summary: 1/4 passed"),
+      });
+    });
+  });
+});

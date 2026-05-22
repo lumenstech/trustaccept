@@ -39,22 +39,31 @@ async function getJson(path, expectedStatus = 200, headers = {}) {
   return body;
 }
 
+async function runCheck(name, fn) {
+  try {
+    await fn();
+  } catch (err) {
+    record(name, false, err instanceof Error ? err.message : String(err));
+  }
+}
+
 async function checkHealth() {
   const body = await getJson("/api/health");
   record("health", body.status === "ok", `status=${body.status ?? "<missing>"}`);
 }
 
 async function checkReadiness() {
-  const body = await getJson("/api/ready");
+  const body = await getJson("/api/ready", 200);
   const failures = Array.isArray(body.checks)
     ? body.checks.filter((check) => check.state === "error")
     : [];
+  const failureNames = failures.map((check) => check.name).join(", ");
   record(
     "readiness",
     body.status === "ok" && failures.length === 0,
     failures.length === 0
       ? "all checks ready"
-      : `${failures.length} failing check(s)`,
+      : `${failures.length} failing check(s): ${failureNames}`,
   );
 }
 
@@ -134,14 +143,10 @@ async function runApprovalCreate() {
 }
 
 async function main() {
-  try {
-    await checkHealth();
-    await checkReadiness();
-    await checkJwks();
-    await runApprovalCreate();
-  } catch (err) {
-    record("smoke", false, err instanceof Error ? err.message : String(err));
-  }
+  await runCheck("health", checkHealth);
+  await runCheck("readiness", checkReadiness);
+  await runCheck("jwks", checkJwks);
+  await runCheck("approval_create", runApprovalCreate);
 
   const failed = checks.filter((check) => !check.ok);
   console.log("");

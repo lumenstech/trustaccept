@@ -366,11 +366,12 @@ install completes without modifying versions.
 | `TRUSTACCEPT_VERIFY_TARGET_URL` | Optional deployed base URL for `npm run verify:prod` live checks | unset |
 | `TRUSTACCEPT_SMOKE_SESSION_TOKEN` | Optional production `ta_session` value used only by `npm run smoke:prod` when authenticated approval creation is enabled | unset |
 | `TRUSTACCEPT_SMOKE_CREATE_APPROVAL` | Set to `1` to let `npm run smoke:prod` create a low-risk smoke approval through `/api/v1/approvals` | `0` |
+| `TRUSTACCEPT_SMOKE_TOOL_ID` | Optional `tool_id` used by `npm run smoke:prod` when creating a smoke approval | first `TRUSTACCEPT_ALLOWED_TOOL_IDS` value |
 
 ### Production readiness checks
 
 - `npm run verify:prod` is the deploy preflight. It fails unless production env is strict: Prisma storage, Neon `DATABASE_URL`, demo auth disabled, Upstash required/configured, approval token secret present, MCP tool allowlist configured, public base URL HTTPS, receipt private key present, and SequenceNow webhook required/configured.
-- Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health` and `/api/ready`.
+- Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health`, `/api/ready`, and `/.well-known/jwks.json`.
 - `GET /api/health` is a liveness check and returns `200` when the process is up.
 - `GET /api/ready` checks the production dependencies that are configured:
   - Neon/Postgres via Prisma when `TRUSTACCEPT_STORAGE_BACKEND=prisma`.

@@ -60,6 +60,26 @@ async function checkEndpoint(baseUrl, path, expectedStatus = 200) {
   }
 }
 
+async function checkJsonEndpoint(baseUrl, path, validate) {
+  const url = `${baseUrl.replace(/\/$/, "")}${path}`;
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const body = await res.json();
+    const validation = validate(body, res.status);
+    add(
+      `endpoint ${path}`,
+      validation.ok,
+      validation.detail,
+    );
+  } catch (err) {
+    add(
+      `endpoint ${path}`,
+      false,
+      err instanceof Error ? err.message : "request failed",
+    );
+  }
+}
+
 function validateEnv() {
   add(
     "NODE_ENV",
@@ -160,7 +180,24 @@ async function main() {
     );
     if (isUrl(target)) {
       await checkEndpoint(target, "/api/health");
-      await checkEndpoint(target, "/api/ready");
+      await checkJsonEndpoint(target, "/api/ready", (body, status) => ({
+        ok: status === 200 && body?.status === "ok",
+        detail:
+          status === 200 && body?.status === "ok"
+            ? "ready"
+            : `expected ready HTTP 200, got HTTP ${status}: ${JSON.stringify(body).slice(0, 500)}`,
+      }));
+      await checkJsonEndpoint(target, "/.well-known/jwks.json", (body, status) => {
+        const keys = Array.isArray(body?.keys) ? body.keys : [];
+        const hasRs256Key = keys.some((key) => key?.kid && key?.alg === "RS256");
+        return {
+          ok: status === 200 && hasRs256Key,
+          detail:
+            status === 200 && hasRs256Key
+              ? `${keys.length} key(s)`
+              : `expected RS256 JWKS key, got HTTP ${status}: ${JSON.stringify(body).slice(0, 500)}`,
+        };
+      });
     }
   } else {
     add(

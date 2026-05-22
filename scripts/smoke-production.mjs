@@ -34,8 +34,19 @@ function record(name, ok, detail) {
 }
 
 async function getJson(path, expectedStatus = 200, headers = {}) {
+  return requestJson("GET", path, undefined, expectedStatus, headers);
+}
+
+async function requestJson(method, path, payload, expectedStatus = 200, headers = {}) {
   const url = `${baseUrl()}${path}`;
-  const res = await fetch(url, { headers, cache: "no-store" });
+  const res = await fetch(url, {
+    method,
+    headers: payload
+      ? { "content-type": "application/json", ...headers }
+      : headers,
+    body: payload ? JSON.stringify(payload) : undefined,
+    cache: "no-store",
+  });
   let body;
   try {
     body = await res.json();
@@ -106,6 +117,46 @@ async function checkProtectedApiClosed() {
     "api_auth_boundary",
     body.error === "Authentication required",
     body.error ?? "missing expected auth error",
+  );
+}
+
+async function checkPolicySurface() {
+  const sessionToken = env("TRUSTACCEPT_SMOKE_SESSION_TOKEN");
+  if (sessionToken) {
+    const headers = { cookie: `ta_session=${sessionToken}` };
+    const policy = await getJson("/api/v1/policy", 200, headers);
+    const run = await getJson(
+      "/api/v1/approvals/by-run/trustaccept-smoke-run",
+      200,
+      headers,
+    );
+    record(
+      "policy_surface",
+      policy.policy?.default_decision === "require_human" &&
+        typeof run.total === "number" &&
+        run.agent_run_id === "trustaccept-smoke-run",
+      "authenticated policy and run-rollup endpoints responded",
+    );
+    return;
+  }
+
+  const policy = await getJson("/api/v1/policy", 401);
+  const evaluate = await requestJson(
+    "POST",
+    "/api/v1/approvals/evaluate",
+    {},
+    401,
+  );
+  const run = await getJson("/api/v1/approvals/by-run/trustaccept-smoke-run", 401);
+  const closed = [policy, evaluate, run].every(
+    (body) => body.error === "Authentication required",
+  );
+  record(
+    "policy_surface",
+    closed,
+    closed
+      ? "policy endpoints reject unauthenticated requests"
+      : "one or more policy endpoints did not fail closed",
   );
 }
 
@@ -182,6 +233,7 @@ async function main() {
   await runCheck("readiness", checkReadiness);
   await runCheck("jwks", checkJwks);
   await runCheck("api_auth_boundary", checkProtectedApiClosed);
+  await runCheck("policy_surface", checkPolicySurface);
   await runCheck("approval_create", runApprovalCreate);
 
   const failed = checks.filter((check) => !check.ok);

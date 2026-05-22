@@ -55,6 +55,13 @@ describe("scripts/smoke-production.mjs", () => {
       if (req.url === "/api/v1/approvals") {
         return json(res, 401, { error: "Authentication required" });
       }
+      if (
+        req.url === "/api/v1/policy" ||
+        req.url === "/api/v1/approvals/evaluate" ||
+        req.url === "/api/v1/approvals/by-run/trustaccept-smoke-run"
+      ) {
+        return json(res, 401, { error: "Authentication required" });
+      }
       return json(res, 404, { error: "not found" });
     }, async (baseUrl) => {
       const { stdout } = await execFileAsync(
@@ -70,8 +77,9 @@ describe("scripts/smoke-production.mjs", () => {
       expect(stdout).toContain("ok   readiness");
       expect(stdout).toContain("ok   jwks");
       expect(stdout).toContain("ok   api_auth_boundary");
+      expect(stdout).toContain("ok   policy_surface");
       expect(stdout).toContain("ok   approval_create - skipped");
-      expect(stdout).toContain("summary: 5/5 passed");
+      expect(stdout).toContain("summary: 6/6 passed");
     });
   }, 15000);
 
@@ -85,6 +93,26 @@ describe("scripts/smoke-production.mjs", () => {
       if (req.url === "/api/v1/approvals") {
         expect(req.headers.cookie).toBe("ta_session=smoke-session-token");
         return json(res, 200, { approvals: [] });
+      }
+      if (req.url === "/api/v1/policy") {
+        expect(req.headers.cookie).toBe("ta_session=smoke-session-token");
+        return json(res, 200, {
+          policy: { version: "v1", default_decision: "require_human", rules: [] },
+        });
+      }
+      if (req.url === "/api/v1/approvals/by-run/trustaccept-smoke-run") {
+        expect(req.headers.cookie).toBe("ta_session=smoke-session-token");
+        return json(res, 200, {
+          agent_run_id: "trustaccept-smoke-run",
+          actions: [],
+          total: 0,
+          summary: {
+            auto_approved: 0,
+            human_approved: 0,
+            denied_or_blocked: 0,
+            pending: 0,
+          },
+        });
       }
       return json(res, 404, { error: "not found" });
     }, async (baseUrl) => {
@@ -103,7 +131,10 @@ describe("scripts/smoke-production.mjs", () => {
       expect(stdout).toContain(
         "ok   api_auth_boundary - authenticated API accepted smoke session",
       );
-      expect(stdout).toContain("summary: 5/5 passed");
+      expect(stdout).toContain(
+        "ok   policy_surface - authenticated policy and run-rollup endpoints responded",
+      );
+      expect(stdout).toContain("summary: 6/6 passed");
     });
   }, 15000);
 
@@ -118,6 +149,13 @@ describe("scripts/smoke-production.mjs", () => {
       }
       if (req.url === "/.well-known/jwks.json") return json(res, 200, { keys: [] });
       if (req.url === "/api/v1/approvals") return json(res, 200, { approvals: [] });
+      if (
+        req.url === "/api/v1/policy" ||
+        req.url === "/api/v1/approvals/evaluate" ||
+        req.url === "/api/v1/approvals/by-run/trustaccept-smoke-run"
+      ) {
+        return json(res, 401, { error: "Authentication required" });
+      }
       return json(res, 404, { error: "not found" });
     }, async (baseUrl) => {
       await expect(
@@ -126,7 +164,7 @@ describe("scripts/smoke-production.mjs", () => {
           env: smokeEnv(baseUrl),
         }),
       ).rejects.toMatchObject({
-        stdout: expect.stringContaining("summary: 1/5 passed"),
+        stdout: expect.stringContaining("summary: 2/6 passed"),
       });
     });
   }, 15000);

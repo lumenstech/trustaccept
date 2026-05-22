@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
+
+const ORIGINAL_ENV = { ...process.env };
 
 function request(path: string, cookie?: string): NextRequest {
   return new NextRequest(`https://trustaccept.example${path}`, {
@@ -9,6 +11,10 @@ function request(path: string, cookie?: string): NextRequest {
 }
 
 describe("proxy auth boundary", () => {
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+  });
+
   it("allows public marketing routes without a session", () => {
     process.env.TRUSTACCEPT_DISABLE_DEMO_AUTH = "1";
 

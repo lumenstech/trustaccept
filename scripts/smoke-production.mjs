@@ -75,8 +75,18 @@ async function checkJwks() {
 }
 
 async function checkProtectedApiClosed() {
-  if (env("TRUSTACCEPT_SMOKE_SESSION_TOKEN")) {
-    record("api_auth_boundary", true, "skipped; smoke session token provided");
+  const sessionToken = env("TRUSTACCEPT_SMOKE_SESSION_TOKEN");
+  if (sessionToken) {
+    const body = await getJson("/api/v1/approvals", 200, {
+      cookie: `ta_session=${sessionToken}`,
+    });
+    record(
+      "api_auth_boundary",
+      Array.isArray(body.approvals),
+      Array.isArray(body.approvals)
+        ? "authenticated API accepted smoke session"
+        : "authenticated response missing approvals array",
+    );
     return;
   }
 

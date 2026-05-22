@@ -75,6 +75,38 @@ describe("scripts/smoke-production.mjs", () => {
     });
   });
 
+  it("validates the authenticated API boundary when a smoke session token is provided", async () => {
+    await withServer((req, res) => {
+      if (req.url === "/api/health") return json(res, 200, { status: "ok" });
+      if (req.url === "/api/ready") return json(res, 200, { status: "ok", checks: [] });
+      if (req.url === "/.well-known/jwks.json") {
+        return json(res, 200, { keys: [{ kid: "k1", alg: "RS256" }] });
+      }
+      if (req.url === "/api/v1/approvals") {
+        expect(req.headers.cookie).toBe("ta_session=smoke-session-token");
+        return json(res, 200, { approvals: [] });
+      }
+      return json(res, 404, { error: "not found" });
+    }, async (baseUrl) => {
+      const { stdout } = await execFileAsync(
+        process.execPath,
+        ["scripts/smoke-production.mjs"],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...smokeEnv(baseUrl),
+            TRUSTACCEPT_SMOKE_SESSION_TOKEN: "smoke-session-token",
+          },
+        },
+      );
+
+      expect(stdout).toContain(
+        "ok   api_auth_boundary - authenticated API accepted smoke session",
+      );
+      expect(stdout).toContain("summary: 5/5 passed");
+    });
+  });
+
   it("reports all failed checks instead of stopping after the first failure", async () => {
     await withServer((req, res) => {
       if (req.url === "/api/health") return json(res, 500, { status: "down" });

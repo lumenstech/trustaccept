@@ -304,7 +304,7 @@ npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
 npm run verify:prod       # strict production env preflight; set TRUSTACCEPT_VERIFY_TARGET_URL to hit /api/health + /api/ready
-npm run smoke:prod        # deployed smoke check for health, readiness, JWKS, API auth boundary, and optional approval create
+npm run smoke:prod        # deployed smoke check for health, readiness, JWKS, closed/open API auth boundary, and optional approval create
 ```
 
 If `npm install` fails with `ETARGET No matching version found for hasown@^2.0.3`
@@ -339,8 +339,8 @@ install completes without modifying versions.
 4. Run `npm run prisma:migrate:deploy` against the production Neon database.
 5. Deploy the `runner` container and wait for platform health checks.
 6. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run verify:prod`.
-7. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run smoke:prod`.
-8. Optionally verify the authenticated approval path by setting `TRUSTACCEPT_SMOKE_CREATE_APPROVAL=1` and `TRUSTACCEPT_SMOKE_SESSION_TOKEN=<SequenceNow ta_session value>` before `npm run smoke:prod`.
+7. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run smoke:prod`; without `TRUSTACCEPT_SMOKE_SESSION_TOKEN`, this verifies protected APIs return JSON `401`.
+8. Verify the authenticated approval path by setting `TRUSTACCEPT_SMOKE_SESSION_TOKEN=<SequenceNow ta_session value>` before `npm run smoke:prod`; add `TRUSTACCEPT_SMOKE_CREATE_APPROVAL=1` when you want it to create a low-risk smoke approval.
 9. Send one internal SequenceNow-delivered approval and verify the returned receipt with `examples/verify-receipt`.
 
 ### Environment variables
@@ -364,7 +364,7 @@ install completes without modifying versions.
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
 | `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make the route proxy reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
 | `TRUSTACCEPT_VERIFY_TARGET_URL` | Optional deployed base URL for `npm run verify:prod` live checks | unset |
-| `TRUSTACCEPT_SMOKE_SESSION_TOKEN` | Optional production `ta_session` value used only by `npm run smoke:prod` when authenticated approval creation is enabled | unset |
+| `TRUSTACCEPT_SMOKE_SESSION_TOKEN` | Optional production `ta_session` value used only by `npm run smoke:prod` to validate authenticated API access and, when enabled, approval creation | unset |
 | `TRUSTACCEPT_SMOKE_CREATE_APPROVAL` | Set to `1` to let `npm run smoke:prod` create a low-risk smoke approval through `/api/v1/approvals` | `0` |
 | `TRUSTACCEPT_SMOKE_TOOL_ID` | Optional `tool_id` used by `npm run smoke:prod` when creating a smoke approval | first `TRUSTACCEPT_ALLOWED_TOOL_IDS` value |
 
@@ -372,6 +372,7 @@ install completes without modifying versions.
 
 - `npm run verify:prod` is the deploy preflight. It fails unless production env is strict: Prisma storage, Neon `DATABASE_URL`, demo auth disabled, Upstash required/configured, approval token secret present, MCP tool allowlist configured, public base URL HTTPS, receipt private key present, and SequenceNow webhook required/configured.
 - Set `TRUSTACCEPT_VERIFY_TARGET_URL=https://...` when running the preflight against a deployed environment; it will also call `/api/health`, `/api/ready`, `/.well-known/jwks.json`, and verify required security headers.
+- `npm run smoke:prod` verifies protected API behavior both ways: without `TRUSTACCEPT_SMOKE_SESSION_TOKEN`, `/api/v1/approvals` must return JSON `401`; with a token, the same endpoint must return an authenticated approvals response before optional approval creation runs.
 - `GET /api/health` is a liveness check and returns `200` when the process is up.
 - `GET /api/ready` checks the production dependencies that are configured:
   - Neon/Postgres via Prisma when `TRUSTACCEPT_STORAGE_BACKEND=prisma`.
@@ -381,7 +382,7 @@ install completes without modifying versions.
   - Hosted approval token secret. In `NODE_ENV=production`, `TRUSTACCEPT_APPROVAL_TOKEN_SECRET` is required.
   - MCP tool allowlist. In `NODE_ENV=production`, `TRUSTACCEPT_ALLOWED_TOOL_IDS` is required.
   - Optional SequenceNow webhook delivery; set `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1` to fail closed when webhook delivery is missing or unhealthy.
-- When demo auth is disabled, protected dashboard pages without `ta_session` redirect to `/`, while protected API routes return JSON `401` so MCP/API clients can fail cleanly.
+- When demo auth is disabled, protected dashboard pages without `ta_session` redirect to `/`, while protected API routes return JSON `401` so MCP/API clients can fail cleanly. API route handlers also fail closed when no SequenceNow session resolves, so the proxy is not the only auth boundary.
 
 ### SequenceNow session contract
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { requireCurrentUser } from "@/src/server/auth";
 import {
@@ -20,10 +20,17 @@ import type { ApprovalRequestInputType } from "@/src/lib/approval-types";
 import { POST as approvalsPost, GET as approvalsGet } from "@/app/api/v1/approvals/route";
 import { GET as approvalByIdGet } from "@/app/api/v1/approvals/[id]/route";
 
+const ORIGINAL_ENV = { ...process.env };
+
 beforeEach(() => {
+  process.env = { ...ORIGINAL_ENV };
   __resetStoreForTests();
   __resetNotificationsForTests();
   delete process.env.TRUSTACCEPT_ALLOWED_TOOL_IDS;
+});
+
+afterEach(() => {
+  process.env = { ...ORIGINAL_ENV };
 });
 
 const baseRequest = (): ApprovalRequestInputType => ({
@@ -285,6 +292,22 @@ describe("toApprovalRecord — seeded records still map cleanly", () => {
 });
 
 describe("POST /api/v1/approvals — route handler", () => {
+  it("returns 401 when production auth is required and no session resolves", async () => {
+    process.env.TRUSTACCEPT_DISABLE_DEMO_AUTH = "1";
+    const req = new NextRequest("http://localhost/api/v1/approvals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(baseRequest()),
+    });
+
+    const res = await approvalsPost(req);
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: "Authentication required",
+    });
+  });
+
   it("returns 201 with the created approval", async () => {
     const req = new NextRequest("http://localhost/api/v1/approvals", {
       method: "POST",
@@ -327,6 +350,18 @@ describe("POST /api/v1/approvals — route handler", () => {
 });
 
 describe("GET /api/v1/approvals — route handler", () => {
+  it("returns 401 when production auth is required and no session resolves", async () => {
+    process.env.TRUSTACCEPT_DISABLE_DEMO_AUTH = "1";
+    const req = new NextRequest("http://localhost/api/v1/approvals");
+
+    const res = await approvalsGet(req);
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: "Authentication required",
+    });
+  });
+
   it("returns approvals array including a freshly created one", async () => {
     const user = requireCurrentUser();
     createApproval(user, baseRequest());

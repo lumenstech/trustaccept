@@ -100,6 +100,37 @@ describe("scripts/smoke-production.mjs", () => {
           policy: { version: "v1", default_decision: "require_human", rules: [] },
         });
       }
+      if (req.url === "/api/v1/approvals/evaluate") {
+        expect(req.method).toBe("POST");
+        expect(req.headers.cookie).toBe("ta_session=smoke-session-token");
+        return json(res, 200, {
+          decision: "require_human",
+          matched_rule_id: null,
+          reason: "No matching policy; defaulting to human approval.",
+          suggested_request_approval_args: {
+            action: {
+              type: "read_production_smoke_status",
+              summary: "Read production smoke status",
+              payload: { smoke: true },
+            },
+            principal: {
+              type: "email",
+              value: "trustaccept-smoke@example.invalid",
+            },
+            context: {
+              agent_name: "trustaccept-production-smoke",
+              business_justification: "Read production smoke status",
+              metadata: {
+                agent_run_id: "trustaccept-smoke-run",
+                action_type: "read_production_smoke_status",
+                principal_role: "sre",
+              },
+            },
+          },
+          policy_set_version: "v1",
+          evaluated_at: new Date().toISOString(),
+        });
+      }
       if (req.url === "/api/v1/approvals/by-run/trustaccept-smoke-run") {
         expect(req.headers.cookie).toBe("ta_session=smoke-session-token");
         return json(res, 200, {
@@ -132,7 +163,7 @@ describe("scripts/smoke-production.mjs", () => {
         "ok   api_auth_boundary - authenticated API accepted smoke session",
       );
       expect(stdout).toContain(
-        "ok   policy_surface - authenticated policy and run-rollup endpoints responded",
+        "ok   policy_surface - authenticated policy, evaluate, and run-rollup endpoints responded",
       );
       expect(stdout).toContain("summary: 6/6 passed");
     });

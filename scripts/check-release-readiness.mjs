@@ -85,6 +85,8 @@ function checkReadme(errors) {
     "/api/health",
     "/api/ready",
     "`npm run smoke:prod` verifies protected API behavior both ways",
+    "advisory evaluate",
+    "suggested_request_approval_args",
     "/api/v1/approvals/evaluate",
     "/api/v1/approvals/by-run/[runId]",
     "### MCP policy and run grouping",

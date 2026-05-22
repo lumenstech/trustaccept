@@ -125,6 +125,28 @@ async function checkPolicySurface() {
   if (sessionToken) {
     const headers = { cookie: `ta_session=${sessionToken}` };
     const policy = await getJson("/api/v1/policy", 200, headers);
+    const evaluated = await requestJson(
+      "POST",
+      "/api/v1/approvals/evaluate",
+      {
+        action: "Read production smoke status",
+        principal: {
+          type: "email",
+          value: "trustaccept-smoke@example.invalid",
+          role: "sre",
+        },
+        context: {
+          agent_name: "trustaccept-production-smoke",
+          agent_run_id: "trustaccept-smoke-run",
+          action_type: "read_production_smoke_status",
+          risk_level: "low",
+          summary: "Read production smoke status",
+          metadata: { smoke: true },
+        },
+      },
+      200,
+      headers,
+    );
     const run = await getJson(
       "/api/v1/approvals/by-run/trustaccept-smoke-run",
       200,
@@ -133,9 +155,11 @@ async function checkPolicySurface() {
     record(
       "policy_surface",
       policy.policy?.default_decision === "require_human" &&
+        evaluated.decision === "require_human" &&
+        Boolean(evaluated.suggested_request_approval_args) &&
         typeof run.total === "number" &&
         run.agent_run_id === "trustaccept-smoke-run",
-      "authenticated policy and run-rollup endpoints responded",
+      "authenticated policy, evaluate, and run-rollup endpoints responded",
     );
     return;
   }

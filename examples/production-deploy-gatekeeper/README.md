@@ -1,10 +1,10 @@
 # production-deploy-gatekeeper — TrustAccept end-to-end demo
 
-A ~60-line Node script that performs the IBM demo flow:
+A small Node 20.19+ script that performs the IBM demo flow:
 
 1. An agent (`release-bot`) requests approval for a `production_deploy`.
 2. The TrustAccept policy engine evaluates → `require_approval`, `high` risk → record stays PENDING.
-3. The script prints the approval URL. A human opens it in a browser, sees the policy panel + action hash, and accepts.
+3. The script prints the hosted approval URL. In production this is the signed `approval_url` returned by TrustAccept; in local demo mode it falls back to `/approve/:id`.
 4. The script polls `get_approval_status` until it resolves.
 5. The script fetches the signed RS256 receipt JWT.
 6. The script invokes `examples/verify-receipt/` against the JWT, which verifies the signature with a local public key — **no contact with TrustAccept**.
@@ -37,7 +37,7 @@ export TRUSTACCEPT_API_URL=http://localhost:3000
 node examples/production-deploy-gatekeeper/index.mjs
 ```
 
-The script prints an approval URL like `http://localhost:3000/approve/ra-...`. Open it, click **Accept**, then watch the script print the signed receipt JWT and the `VERIFIED` output from `verify-receipt`.
+The script prints the approval URL returned by the API. In local demo mode it looks like `http://localhost:3000/approve/ra-...`; in production it includes the signed approval token. Open it, click **Accept**, then watch the script print the signed receipt JWT and the `VERIFIED` output from `verify-receipt`.
 
 ## What this proves to a buyer
 
@@ -49,7 +49,7 @@ The script prints an approval URL like `http://localhost:3000/approve/ra-...`. O
 ## Files
 
 - `index.mjs` — the demo script
-- `package.json` — declares Node ≥ 18; no dependencies
+- `package.json` — declares Node 20.19+; no dependencies
 - `RECORDING_PLAN.md` — shot-by-shot transcript for the 90-second screen capture
 
 ## Operational note

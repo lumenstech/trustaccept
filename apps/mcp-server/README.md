@@ -6,7 +6,7 @@ TrustAccept MCP server — thin stdio proxy over `/api/v1/approvals`. Exposes th
 - `get_approval_status(request_id)`
 - `list_pending_approvals(principal_type?, principal_value?, limit?)`
 
-This package is intentionally standalone: own `package.json`, own `node_modules`, no parent-repo imports. The Zod schemas in `src/schemas.ts` mirror the contract in [`../FIELD_MAPPING.md`](../FIELD_MAPPING.md).
+This package is intentionally separate from the web app runtime: own `package.json`, own `node_modules`, and a compiled output that includes the shared approval-type schemas it imports from `src/lib/approval-types.ts`. The storage and field contract is documented in [`FIELD_MAPPING.md`](FIELD_MAPPING.md).
 
 ## Install & build
 
@@ -21,7 +21,7 @@ npm run build       # compiles to dist/
 ```bash
 TRUSTACCEPT_API_URL=http://localhost:3000 \
 TRUSTACCEPT_API_KEY=optional-static-token \
-node dist/index.js
+node dist/apps/mcp-server/src/index.js
 ```
 
 Environment variables:
@@ -42,7 +42,7 @@ In your MCP client config (e.g. Claude Desktop's `claude_desktop_config.json`):
   "mcpServers": {
     "trustaccept": {
       "command": "node",
-      "args": ["/absolute/path/to/apps/mcp-server/dist/index.js"],
+      "args": ["/absolute/path/to/apps/mcp-server/dist/apps/mcp-server/src/index.js"],
       "env": {
         "TRUSTACCEPT_API_URL": "http://localhost:3000"
       }
@@ -54,7 +54,7 @@ In your MCP client config (e.g. Claude Desktop's `claude_desktop_config.json`):
 ## Test
 
 ```bash
-npm test            # 17 tests, all paths mocked at the fetch boundary
+npm test            # 18 tests, all paths mocked at the fetch boundary
 ```
 
 ## End-to-end stdio smoke

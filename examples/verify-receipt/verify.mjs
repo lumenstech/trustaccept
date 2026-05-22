@@ -4,7 +4,7 @@
 // Verifies an RS256-signed receipt JWT against a public key. Prints
 // VERIFIED + the cryptographically-bound claims, or FAILED with a
 // diagnostic. No dependencies, no HTTP, no TrustAccept code — this
-// script can run on any machine with Node 18+ and a copy of the
+// script can run on any machine with Node 20.19+ and a copy of the
 // public key.
 //
 // Usage:

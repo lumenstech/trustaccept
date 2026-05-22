@@ -1,6 +1,6 @@
 # verify-receipt
 
-Standalone verifier for TrustAccept receipt JWTs.
+Standalone Node 20.19+ verifier for TrustAccept receipt JWTs.
 
 This script proves that a receipt can be verified **without contacting TrustAccept**. It only needs the receipt JWT and the public key. No database, no HTTP server, no TrustAccept code in `node_modules`.
 

@@ -14,9 +14,9 @@ export interface NotificationDelivery {
 const SENT: NotificationDelivery[] = [];
 
 /**
- * Mock notification dispatcher. In production this can be delivered by
- * SequenceNow through the async helpers below. The sync helpers preserve the
- * local/demo inspection path and existing service-layer API.
+ * Local notification sink. Production delivery goes through SequenceNow via
+ * the async helpers below. The sync helpers preserve the local/demo inspection
+ * path and existing service-layer API.
  */
 function sendLog(eventType: string, subject: string, body: string): NotificationDelivery {
   const delivery: NotificationDelivery = {

@@ -10,7 +10,7 @@ $ node examples/production-deploy-gatekeeper/index.mjs
 
 [2/6] Human approver: open the approval page in a browser:
       http://localhost:3000/approve/ra-mpezxco3-1
-      Click "Accept" to continue. (The page is publicly readable.)
+      Click "Accept" to continue.
 
 [3/6] Polling get_approval_status every 3s for up to 5 minutes …
       status=pending      status=accepted

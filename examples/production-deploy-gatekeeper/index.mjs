@@ -42,7 +42,9 @@ async function main() {
     body: JSON.stringify({ action, principal, context }),
   });
   if (!create.ok) throw new Error(`POST /api/v1/approvals → HTTP ${create.status}`);
-  const { approval } = await create.json();
+  const { approval, approval_url } = await create.json();
+  const approvalUrl =
+    approval_url ?? `${API_URL}/approve/${encodeURIComponent(approval.id)}`;
 
   console.log(
     `      policy → ${approval.policy_id} (risk ${approval.risk_level}, action_hash ${approval.action_hash.slice(0, 23)}…)`,
@@ -50,8 +52,8 @@ async function main() {
   console.log(`      request id: ${approval.id}`);
   console.log("");
   console.log("[2/6] Human approver: open the approval page in a browser:");
-  console.log(`      ${API_URL}/approve/${approval.id}`);
-  console.log("      Click \"Accept\" to continue. (The page is publicly readable.)");
+  console.log(`      ${approvalUrl}`);
+  console.log("      Click \"Accept\" to continue.");
   console.log("");
   console.log("[3/6] Polling get_approval_status every 3s for up to 5 minutes …");
 

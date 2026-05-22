@@ -47,6 +47,9 @@ jobs:
       - name: Validate production env template
         run: npm run env:production:check
 
+      - name: Validate production release readiness
+        run: npm run release:check
+
       - name: Build runtime container
         run: docker build --target runner .
 
@@ -132,3 +135,6 @@ jobs:
 
       - name: Check production env template syntax
         run: node --check scripts/check-production-env-template.mjs
+
+      - name: Check production release readiness syntax
+        run: node --check scripts/check-release-readiness.mjs

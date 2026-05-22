@@ -304,6 +304,7 @@ npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
 npm run env:production:check # verify .env.production.example covers required production variables
+npm run release:check     # verify release gates, Docker healthcheck, and runbooks are present
 npm run verify:prod       # strict production env preflight; set TRUSTACCEPT_VERIFY_TARGET_URL to hit /api/health + /api/ready
 npm run smoke:prod        # deployed smoke check for health, readiness, JWKS, closed/open API auth boundary, and optional approval create
 ```
@@ -343,6 +344,25 @@ install completes without modifying versions.
 7. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run smoke:prod`; without `TRUSTACCEPT_SMOKE_SESSION_TOKEN`, this verifies protected APIs return JSON `401`.
 8. Verify the authenticated approval path by setting `TRUSTACCEPT_SMOKE_SESSION_TOKEN=<SequenceNow ta_session value>` before `npm run smoke:prod`; add `TRUSTACCEPT_SMOKE_CREATE_APPROVAL=1` when you want it to create a low-risk smoke approval.
 9. Send one internal SequenceNow-delivered approval and verify the returned receipt with `examples/verify-receipt`.
+
+### Rollback runbook
+
+1. Stop traffic shift or route traffic back to the last known-good runner image.
+2. Keep the Neon database online; do not run `db push`, destructive SQL, or ad-hoc schema changes during rollback.
+3. Redeploy the prior runner image with the same production secret set.
+4. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run verify:prod`.
+5. Run `TRUSTACCEPT_VERIFY_TARGET_URL=https://<domain> npm run smoke:prod` without a session token to confirm protected APIs still fail closed.
+6. Re-run authenticated smoke with a fresh SequenceNow `ta_session` before reopening internal pilot traffic.
+7. Record the reverted image tag, failed image tag, migration state, and smoke outputs in the incident ticket.
+
+### Production incident response
+
+1. Check platform health and readiness first: `/api/health`, then `/api/ready`.
+2. If `/api/ready` reports `not_ready`, inspect the named check before restarting containers.
+3. If approval creation fails, verify SequenceNow webhook delivery, Upstash session lookup, and `TRUSTACCEPT_ALLOWED_TOOL_IDS`.
+4. If hosted approval links fail, verify `TRUSTACCEPT_APPROVAL_TOKEN_SECRET`, Upstash availability, and token TTL settings.
+5. If receipt verification fails, compare `/.well-known/jwks.json` with the deployed `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM`.
+6. Prefer disabling traffic or rolling back the runner image over changing production secrets live.
 
 ### Environment variables
 

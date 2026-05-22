@@ -313,14 +313,22 @@ machine can reach `https://registry.npmjs.org`. The repo's `package-lock.json`
 pins resolved tarballs to that registry; once the lockfile is honored, the
 install completes without modifying versions.
 
-### Environment variables
-
 ### Database migrations
 
 - Production deploys use checked-in Prisma migrations: `npm run prisma:migrate:deploy`.
 - CI and local release checks should run `npm run prisma:migrate:check` before deploy.
 - `npm run prisma:push` / `npm run db:push` are local-development helpers only. Do not use `db push` against Neon production; it bypasses migration history.
 - The initial migration lives at `prisma/migrations/20260521191500_init/migration.sql` and matches the current `prisma/schema.prisma`.
+
+### Container deployment
+
+- The app builds as a Next.js standalone server (`output: "standalone"`).
+- Build the runtime image with `docker build --target runner -t trustaccept-web .`.
+- Run database migrations before shifting traffic with `docker build --target migrator -t trustaccept-migrator .` followed by `docker run --rm --env-file .env.production trustaccept-migrator`.
+- Run the web container with `docker run --rm --env-file .env.production -p 3000:3000 trustaccept-web`.
+- The runtime container starts `node server.js` as an unprivileged user and expects health checks on `/api/health` and readiness checks on `/api/ready`.
+
+### Environment variables
 
 | Variable | Purpose | Default in demo |
 | --- | --- | --- |

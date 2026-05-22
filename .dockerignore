@@ -1,0 +1,14 @@
+.git
+.github
+.next
+node_modules
+apps/mcp-server
+apps/mcp-server/node_modules
+apps/mcp-server/dist
+coverage
+npm-debug.log*
+.DS_Store
+.env
+.env.*
+!.env.example
+tsconfig.tsbuildinfo

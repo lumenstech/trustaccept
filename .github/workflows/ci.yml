@@ -44,6 +44,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build runtime container
+        run: docker build --target runner .
+
+      - name: Build migration container
+        run: docker build --target migrator .
+
       - name: Production preflight schema
         run: npm run verify:prod
         env:

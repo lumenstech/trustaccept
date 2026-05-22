@@ -303,6 +303,7 @@ npm run prisma:migrate:deploy # production-safe schema migration deploy
 npm run typecheck         # tsc --noEmit
 npm test                  # vitest run
 npm run build             # next build
+npm run env:production:check # verify .env.production.example covers required production variables
 npm run verify:prod       # strict production env preflight; set TRUSTACCEPT_VERIFY_TARGET_URL to hit /api/health + /api/ready
 npm run smoke:prod        # deployed smoke check for health, readiness, JWKS, closed/open API auth boundary, and optional approval create
 ```
@@ -329,7 +330,7 @@ install completes without modifying versions.
 - Build the runtime image with `docker build --target runner -t trustaccept-web .`.
 - Run database migrations before shifting traffic with `docker build --target migrator -t trustaccept-migrator .` followed by `docker run --rm --env-file .env.production trustaccept-migrator`.
 - Run the web container with `docker run --rm --env-file .env.production -p 3000:3000 trustaccept-web`.
-- The runtime container starts `node server.js` as an unprivileged user and expects health checks on `/api/health` and readiness checks on `/api/ready`.
+- The runtime container starts `node server.js` as an unprivileged user, includes a Docker healthcheck for `/api/health`, and expects platform readiness checks on `/api/ready`.
 
 ### Production cutover runbook
 

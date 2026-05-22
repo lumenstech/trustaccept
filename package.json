@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "verify:prod": "node scripts/verify-prod.mjs",
     "smoke:prod": "node scripts/smoke-production.mjs",
+    "env:production:check": "node scripts/check-production-env-template.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate:check": "node scripts/check-prisma-migration.mjs",
     "prisma:migrate:deploy": "prisma migrate deploy",

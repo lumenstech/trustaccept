@@ -24,14 +24,15 @@ support powered by SequenceNow.
 
 ## Stack
 
-- Next.js 14 (App Router) + TypeScript
+- Next.js 16 (App Router) + TypeScript
+- Node.js 20.19+
 - Tailwind CSS
 - shadcn/ui-style components (locally vendored under `components/ui/*`)
 - Prisma + PostgreSQL-compatible schema (multi-tenant, append-only audit logs)
 - Zod-validated API surface
 - In-memory demo persistence backend, swap-ready for Prisma
 - Seed data for all seven modules
-- Mock authentication (production auth is delivered via SequenceNow)
+- Demo authentication for local use; production approval sessions resolve through SequenceNow signed links and Upstash-backed session state
 
 ## Vulnerability Accept (second deep module)
 
@@ -197,8 +198,8 @@ by `/api/demo/risk-flow`:
 | Decision persistence | done | `PATCH /api/risk-records/[id]/decision` with optional note + review date |
 | Evidence PDF export | done | `GET /api/evidence-packets/[id]/export.pdf` returns a real `application/pdf` |
 | CSV export | done | `GET /api/risk-records/export.csv`, RFC-4180 escaping |
-| Lead capture persistence | done | `POST /api/leads`; mock notification dispatched |
-| Auth structure | demo user (Owner) | `src/server/auth.ts`; replace `getCurrentUser` in production |
+| Lead capture persistence | done | `POST /api/leads`; optional SequenceNow webhook delivery |
+| Auth/session structure | done | Demo user for local mode; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled |
 | Zod validation | done | `src/lib/validation.ts` |
 | Security headers | done | XCTO, XFO, Referrer-Policy, Permissions-Policy, CSP, HSTS (prod-only) |
 | Dashboard route protection | scaffolded | `proxy.ts` allows demo user; gate with `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` |
@@ -259,7 +260,7 @@ src/
     riskRecords.ts             # Risk record service (list/get/create/update/decision)
     auditLogs.ts               # Append-only audit log writer + reader
     evidencePackets.ts         # Packet summary + PDF generator
-    leads.ts                   # Lead capture persistence + notification trigger
+    leads.ts                   # Lead capture persistence + notification dispatch
     notifications.ts           # Local log notifications + optional SequenceNow webhook delivery
     csv.ts                     # CSV escaping + risk record CSV builder
     api.ts                     # API route error handler (Zod + auth errors)
@@ -573,7 +574,7 @@ Covers:
 - `src/server/riskRecords.ts` — `createRiskRecord` + `updateRiskRecordDecision` persistence, audit-log append, status filters
 - `src/server/auditLogs.ts` — append-only behavior
 - `src/server/evidencePackets.ts` — packet summary, audit emission, PDF buffer starts with `%PDF-`
-- `src/server/leads.ts` — lead persistence + mock notification dispatch
+- `src/server/leads.ts` — lead persistence + optional SequenceNow webhook dispatch
 - `src/server/csv.ts` — CSV escaping (RFC 4180), stable headers across all seven modules
 
 ## Language guardrails

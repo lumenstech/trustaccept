@@ -9,7 +9,7 @@ export default function SettingsPage() {
       <DashboardHeader
         eyebrow="Settings"
         title="Workspace settings"
-        description="Authentication is mocked in this build. SequenceNow handles approver auth in production."
+        description="Local demo auth is available for development. Production approval sessions resolve through SequenceNow."
       />
       <div className="grid gap-6 px-8 py-8 lg:grid-cols-2">
         <Card>
@@ -30,7 +30,7 @@ export default function SettingsPage() {
           <CardContent className="space-y-3 text-sm">
             <Row label="Signed in as" value="Alex Greene" />
             <Row label="Email" value="alex@trustaccept.dev" />
-            <Row label="Auth source" value="Mock (dev only)" badge="amber" />
+            <Row label="Auth source" value="Demo local / SequenceNow production" badge="info" />
             <Row label="Approval delivery" value="SequenceNow" badge="info" />
           </CardContent>
         </Card>

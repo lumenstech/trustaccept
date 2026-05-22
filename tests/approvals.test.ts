@@ -323,7 +323,7 @@ describe("GET /api/v1/approvals/[id] — route handler", () => {
     const user = requireCurrentUser();
     const created = createApproval(user, baseRequest());
     const res = await approvalByIdGet(new Request("http://localhost/x"), {
-      params: { id: created.id },
+      params: Promise.resolve({ id: created.id }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -332,7 +332,7 @@ describe("GET /api/v1/approvals/[id] — route handler", () => {
 
   it("returns 403 for an unknown id (mirrors existing /api/risk-records behavior)", async () => {
     const res = await approvalByIdGet(new Request("http://localhost/x"), {
-      params: { id: "does-not-exist" },
+      params: Promise.resolve({ id: "does-not-exist" }),
     });
     expect(res.status).toBe(403);
   });

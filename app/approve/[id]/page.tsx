@@ -31,11 +31,12 @@ export default async function ApprovePage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams?: { token?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ token?: string }>;
 }) {
-  await verifyApprovalToken(params.id, searchParams?.token);
-  const record = await getRiskRecordPublicAsync(params.id);
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  await verifyApprovalToken(id, query?.token);
+  const record = await getRiskRecordPublicAsync(id);
   if (!record) notFound();
 
   const module = getModule(record.module);
@@ -80,7 +81,7 @@ export default async function ApprovePage({
               <p className="mt-3 text-base text-muted-foreground">{record.description}</p>
             </div>
 
-            <DecisionActions initialRecord={record} approvalToken={searchParams?.token} />
+            <DecisionActions initialRecord={record} approvalToken={query?.token} />
 
             {hasPolicyContext ? (
               <Card>

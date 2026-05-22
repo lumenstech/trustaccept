@@ -201,7 +201,7 @@ by `/api/demo/risk-flow`:
 | Auth structure | demo user (Owner) | `src/server/auth.ts`; replace `getCurrentUser` in production |
 | Zod validation | done | `src/lib/validation.ts` |
 | Security headers | done | XCTO, XFO, Referrer-Policy, Permissions-Policy, CSP, HSTS (prod-only) |
-| Dashboard route protection | scaffolded | `middleware.ts` allows demo user; gate with `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` |
+| Dashboard route protection | scaffolded | `proxy.ts` allows demo user; gate with `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` |
 
 ## Project layout
 
@@ -264,7 +264,7 @@ src/
     csv.ts                     # CSV escaping + risk record CSV builder
     api.ts                     # API route error handler (Zod + auth errors)
 app/api/                       # Route handlers (risk records, decision, csv, pdf, leads, demo)
-middleware.ts                  # Dashboard + API route protection (demo-auth-friendly)
+proxy.ts                       # Dashboard + API route protection (demo-auth-friendly)
 tests/                         # Vitest unit tests
 prisma/
   schema.prisma                # PostgreSQL-compatible schema
@@ -346,7 +346,7 @@ install completes without modifying versions.
 | `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK` | Set to `1` so `/api/ready` and delivery paths fail when the webhook is missing or failing | `0` |
 | `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_PEM` | RS256 private key used to issue approval receipt JWTs | unset |
 | `NODE_ENV` | `production` flips on HSTS and tightens CSP | `development` |
-| `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make middleware reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
+| `TRUSTACCEPT_DISABLE_DEMO_AUTH` | Set to `1` to make the route proxy reject requests without a real `ta_session` cookie | unset (demo user allowed through) |
 | `TRUSTACCEPT_VERIFY_TARGET_URL` | Optional deployed base URL for `npm run verify:prod` live checks | unset |
 
 ### Production readiness checks
@@ -419,7 +419,7 @@ TRUSTACCEPT_VERIFY_TARGET_URL=https://trustaccept.your-domain.example
 ### What is mocked vs real
 
 - **Mocked**: identity only when demo auth is enabled (single demo user, `Owner` role, `demo-org`), PDF rendering (compact hand-rolled PDF; swap for pdfkit/react-pdf in production).
-- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; signed hosted approval links with Upstash-backed consume-on-decision state; optional SequenceNow webhook delivery for leads and decision events; Neon, Upstash, and delivery readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + middleware; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
+- **Real**: Prisma-backed risk record, approval, audit log, and evidence packet persistence when `TRUSTACCEPT_STORAGE_BACKEND=prisma`; SequenceNow `ta_session` resolution through Upstash when demo auth is disabled; signed hosted approval links with Upstash-backed consume-on-decision state; optional SequenceNow webhook delivery for leads and decision events; Neon, Upstash, and delivery readiness checks; append-only audit log writes; organization-scoped reads; Zod validation; RFC 4180 CSV escaping; dynamic Next.js rendering of dashboard pages; security headers + route proxy; decision lifecycle including `decision`/`decisionBy`/`decisionAt`/`decisionNote`/`reviewDate`/audit entry.
 
 The UI reads seed records directly from `lib/seed-data.ts`, so you can develop the
 front-end without a database. Prisma and the seed script are wired up for when you're

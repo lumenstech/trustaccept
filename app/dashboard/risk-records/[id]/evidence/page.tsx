@@ -12,11 +12,16 @@ import { getRiskRecordForOrganizationAsync } from "@/src/server/riskRecords";
 
 export const dynamic = "force-dynamic";
 
-export default async function EvidencePacketPage({ params }: { params: { id: string } }) {
+export default async function EvidencePacketPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const user = await requireDashboardAccessAsync();
   const record = await (async () => {
     try {
-      return await getRiskRecordForOrganizationAsync(user, params.id);
+      return await getRiskRecordForOrganizationAsync(user, id);
     } catch {
       return null;
     }

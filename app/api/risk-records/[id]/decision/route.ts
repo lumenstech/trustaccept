@@ -8,14 +8,15 @@ import { ApprovalDecisionInput } from "@/src/lib/validation";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const user = await requireDecisionAccessAsync();
     const json = await req.json();
     const input = ApprovalDecisionInput.parse(json);
-    await verifyApprovalToken(params.id, input.approvalToken, { consume: true });
-    const record = await updateRiskRecordDecisionAsync(user, params.id, input);
+    await verifyApprovalToken(id, input.approvalToken, { consume: true });
+    const record = await updateRiskRecordDecisionAsync(user, id, input);
     await notifyDecisionRecordedAsync(record, user);
     return NextResponse.json({ record });
   } catch (err) {

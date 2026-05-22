@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * structure is in place so production auth can hook in by issuing a
  * session cookie (e.g. SequenceNow-delivered token) named "ta_session".
  */
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (!isProtected(pathname)) {

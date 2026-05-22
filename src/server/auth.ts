@@ -61,7 +61,7 @@ function normalizeSessionUser(value: unknown): SessionUser | null {
 async function sessionTokenFromCookie(): Promise<string | null> {
   try {
     const { cookies } = await import("next/headers");
-    return cookies().get(SESSION_COOKIE_NAME)?.value ?? null;
+    return (await cookies()).get(SESSION_COOKIE_NAME)?.value ?? null;
   } catch {
     return null;
   }

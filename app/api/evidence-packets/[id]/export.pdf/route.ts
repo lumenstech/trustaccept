@@ -23,17 +23,25 @@ async function exportPdf(id: string) {
   });
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    return await exportPdf(params.id);
+    const { id } = await params;
+    return await exportPdf(id);
   } catch (err) {
     return handleApiError(err);
   }
 }
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
-    return await exportPdf(params.id);
+    const { id } = await params;
+    return await exportPdf(id);
   } catch (err) {
     return handleApiError(err);
   }

@@ -3,10 +3,14 @@ import { handleApiError } from "@/src/server/api";
 import { requireDashboardAccessAsync } from "@/src/server/auth";
 import { getRiskRecordForOrganizationAsync } from "@/src/server/riskRecords";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
+    const { id } = await params;
     const user = await requireDashboardAccessAsync();
-    const record = await getRiskRecordForOrganizationAsync(user, params.id);
+    const record = await getRiskRecordForOrganizationAsync(user, id);
     return NextResponse.json({ record });
   } catch (err) {
     return handleApiError(err);

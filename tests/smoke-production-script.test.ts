@@ -130,4 +130,17 @@ describe("scripts/smoke-production.mjs", () => {
       });
     });
   });
+
+  it("rejects non-HTTPS non-loopback production targets", async () => {
+    await expect(
+      execFileAsync(process.execPath, ["scripts/smoke-production.mjs"], {
+        cwd: process.cwd(),
+        env: smokeEnv("http://trustaccept.example"),
+      }),
+    ).rejects.toMatchObject({
+      stdout: expect.stringContaining(
+        "Production smoke target must use HTTPS unless it is localhost/loopback",
+      ),
+    });
+  });
 });

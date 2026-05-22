@@ -7,13 +7,24 @@ function env(name) {
   return value && value.trim().length > 0 ? value.trim() : "";
 }
 
+function isLoopbackHttp(url) {
+  return (
+    url.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "::1"].includes(url.hostname)
+  );
+}
+
 function baseUrl() {
   const target =
     env("TRUSTACCEPT_VERIFY_TARGET_URL") || env("TRUSTACCEPT_PUBLIC_BASE_URL");
   if (!target) {
     throw new Error("Set TRUSTACCEPT_VERIFY_TARGET_URL or TRUSTACCEPT_PUBLIC_BASE_URL");
   }
-  return target.replace(/\/+$/, "");
+  const parsed = new URL(target);
+  if (parsed.protocol !== "https:" && !isLoopbackHttp(parsed)) {
+    throw new Error("Production smoke target must use HTTPS unless it is localhost/loopback");
+  }
+  return parsed.toString().replace(/\/+$/, "");
 }
 
 function record(name, ok, detail) {

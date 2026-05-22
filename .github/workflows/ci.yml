@@ -123,3 +123,6 @@ jobs:
 
       - name: Check production smoke syntax
         run: node --check scripts/smoke-production.mjs
+
+      - name: Check production preflight syntax
+        run: node --check scripts/verify-prod.mjs

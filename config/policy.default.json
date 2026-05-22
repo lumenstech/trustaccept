@@ -1,0 +1,5 @@
+{
+  "version": "default-v1",
+  "default_decision": "require_human",
+  "rules": []
+}

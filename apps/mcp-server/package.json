@@ -2,7 +2,7 @@
   "name": "@trustaccept/mcp-server",
   "version": "0.1.0",
   "private": true,
-  "description": "TrustAccept MCP server — thin proxy over /api/v1/approvals. Exposes request_approval, get_approval_status, list_pending_approvals over stdio.",
+  "description": "TrustAccept MCP server — thin proxy over /api/v1/approvals. Exposes approvals, advisory policy evaluation, and run grouping over stdio.",
   "type": "module",
   "main": "dist/apps/mcp-server/src/index.js",
   "bin": {

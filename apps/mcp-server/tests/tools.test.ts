@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { ApprovalsClient } from "../src/client.js";
 import {
   TOOL_DEFINITIONS,
+  handleEvaluateAction,
   handleGetApprovalStatus,
   handleListPendingApprovals,
+  handleListRunActions,
   handleRequestApproval,
 } from "../src/tools.js";
 
@@ -67,11 +69,13 @@ const RESERVED_FIELDS = [
 ];
 
 describe("TOOL_DEFINITIONS", () => {
-  it("declares exactly the three locked tool names in the documented order", () => {
+  it("declares exactly the five locked tool names in the documented order", () => {
     expect(TOOL_DEFINITIONS.map((t) => t.name)).toEqual([
       "request_approval",
       "get_approval_status",
       "list_pending_approvals",
+      "evaluate_action",
+      "list_run_actions",
     ]);
   });
 
@@ -98,6 +102,99 @@ describe("TOOL_DEFINITIONS", () => {
     expect(req.description).toContain("120");
     const list = TOOL_DEFINITIONS.find((t) => t.name === "list_pending_approvals")!;
     expect(list.description).toContain("120");
+  });
+});
+
+describe("evaluate_action", () => {
+  it("POSTs the advisory policy evaluation input", async () => {
+    const fetchImpl = fakeFetch((url, init) => {
+      expect(url).toBe("http://api.test/api/v1/approvals/evaluate");
+      expect(init?.method).toBe("POST");
+      expect(JSON.parse(init?.body as string)).toMatchObject({
+        action: "Deploy web v1.2.0 to staging",
+        principal: { type: "user_id", value: "user-77", role: "sre" },
+        context: {
+          agent_name: "Deploy Gatekeeper",
+          agent_run_id: "run-42",
+          action_type: "deploy",
+          risk_level: "low",
+          summary: "Deploy web v1.2.0 to staging",
+        },
+      });
+      return new Response(
+        JSON.stringify({
+          decision: "auto_approve",
+          matched_rule_id: "sre-low-deploy",
+          reason: "Matched policy rule sre-low-deploy.",
+          suggested_request_approval_args: null,
+          policy_set_version: "v1",
+          evaluated_at: "2026-05-22T13:00:00.000Z",
+        }),
+      );
+    });
+
+    const result = await handleEvaluateAction(makeClient(fetchImpl), {
+      action: "Deploy web v1.2.0 to staging",
+      principal: { type: "user_id", value: "user-77", role: "sre" },
+      context: {
+        agent_name: "Deploy Gatekeeper",
+        agent_run_id: "run-42",
+        action_type: "deploy",
+        risk_level: "low",
+        summary: "Deploy web v1.2.0 to staging",
+      },
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(result.content[0].text).decision).toBe("auto_approve");
+  });
+
+  it("rejects invalid evaluate_action input without an HTTP call", async () => {
+    const fetchImpl = fakeFetch(() => new Response("{}"));
+    const result = await handleEvaluateAction(makeClient(fetchImpl), {
+      action: "no",
+    });
+    expect(result.isError).toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("list_run_actions", () => {
+  it("GETs by-run endpoint with encoded run id and limit", async () => {
+    const fetchImpl = fakeFetch((url, init) => {
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe("/api/v1/approvals/by-run/run%2042");
+      expect(parsed.searchParams.get("limit")).toBe("25");
+      expect(init?.method ?? "GET").toBe("GET");
+      return new Response(
+        JSON.stringify({
+          agent_run_id: "run 42",
+          actions: [],
+          total: 0,
+          summary: {
+            auto_approved: 0,
+            human_approved: 0,
+            denied_or_blocked: 0,
+            pending: 0,
+          },
+        }),
+      );
+    });
+
+    const result = await handleListRunActions(makeClient(fetchImpl), {
+      agent_run_id: "run 42",
+      limit: 25,
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(result.content[0].text).summary.pending).toBe(0);
+  });
+
+  it("rejects missing agent_run_id without an HTTP call", async () => {
+    const fetchImpl = fakeFetch(() => new Response("{}"));
+    const result = await handleListRunActions(makeClient(fetchImpl), {});
+    expect(result.isError).toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 

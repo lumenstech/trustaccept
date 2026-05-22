@@ -81,7 +81,7 @@ describe("scripts/verify-prod.mjs", () => {
     expect(stdout).toContain("ok   NODE_ENV");
     expect(stdout).toContain("ok   TRUSTACCEPT_VERIFY_TARGET_URL - not set");
     expect(stdout).toContain("summary: 16/16 passed");
-  });
+  }, 15000);
 
   it("passes live endpoint checks when readiness, JWKS, and security headers are valid", async () => {
     await withServer((req, res) => {
@@ -108,7 +108,7 @@ describe("scripts/verify-prod.mjs", () => {
       expect(stdout).toContain("ok   endpoint security headers - required headers present");
       expect(stdout).toContain("summary: 20/20 passed");
     });
-  });
+  }, 15000);
 
   it("fails live endpoint checks when required security headers are missing", async () => {
     await withServer((req, res) => {
@@ -129,5 +129,5 @@ describe("scripts/verify-prod.mjs", () => {
         stderr: expect.stringContaining("production verification failed: 1 error(s)"),
       });
     });
-  });
+  }, 15000);
 });

@@ -3,6 +3,11 @@ import type {
   ApprovalRequestInputType,
   ListPendingApprovalsInputType,
 } from "../../../src/lib/approval-types.js";
+import type {
+  EvaluateActionInputType,
+  EvaluateActionOutputType,
+  ListRunActionsOutputType,
+} from "../../../src/lib/policy-types.js";
 
 export interface ApprovalsClientConfig {
   baseUrl: string;
@@ -54,6 +59,27 @@ export class ApprovalsClient {
     if (input.limit != null) params.set("limit", String(input.limit));
     const body = await this.do("GET", "/api/v1/approvals", params);
     return (body as { approvals: ApprovalRecord[] }).approvals;
+  }
+
+  async evaluateAction(
+    input: EvaluateActionInputType,
+  ): Promise<EvaluateActionOutputType> {
+    const body = await this.do("POST", "/api/v1/approvals/evaluate", undefined, input);
+    return body as EvaluateActionOutputType;
+  }
+
+  async listRunActions(
+    agentRunId: string,
+    limit?: number,
+  ): Promise<ListRunActionsOutputType> {
+    const params = new URLSearchParams();
+    if (limit != null) params.set("limit", String(limit));
+    const body = await this.do(
+      "GET",
+      `/api/v1/approvals/by-run/${encodeURIComponent(agentRunId)}`,
+      params,
+    );
+    return body as ListRunActionsOutputType;
   }
 
   private async do(

@@ -16,7 +16,8 @@
   },
   "include": [
     "src/**/*",
-    "../../src/lib/approval-types.ts"
+    "../../src/lib/approval-types.ts",
+    "../../src/lib/policy-types.ts"
   ],
   "exclude": [
     "node_modules",

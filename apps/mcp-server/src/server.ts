@@ -7,8 +7,10 @@ import {
 import type { ApprovalsClient } from "./client.js";
 import {
   TOOL_DEFINITIONS,
+  handleEvaluateAction,
   handleGetApprovalStatus,
   handleListPendingApprovals,
+  handleListRunActions,
   handleRequestApproval,
   type ToolResult,
 } from "./tools.js";
@@ -36,6 +38,10 @@ export function createServer(client: ApprovalsClient): Server {
         return toCallToolResult(await handleGetApprovalStatus(client, args));
       case "list_pending_approvals":
         return toCallToolResult(await handleListPendingApprovals(client, args));
+      case "evaluate_action":
+        return toCallToolResult(await handleEvaluateAction(client, args));
+      case "list_run_actions":
+        return toCallToolResult(await handleListRunActions(client, args));
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

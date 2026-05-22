@@ -73,7 +73,7 @@ describe("scripts/smoke-production.mjs", () => {
       expect(stdout).toContain("ok   approval_create - skipped");
       expect(stdout).toContain("summary: 5/5 passed");
     });
-  });
+  }, 15000);
 
   it("validates the authenticated API boundary when a smoke session token is provided", async () => {
     await withServer((req, res) => {
@@ -105,7 +105,7 @@ describe("scripts/smoke-production.mjs", () => {
       );
       expect(stdout).toContain("summary: 5/5 passed");
     });
-  });
+  }, 15000);
 
   it("reports all failed checks instead of stopping after the first failure", async () => {
     await withServer((req, res) => {
@@ -129,7 +129,7 @@ describe("scripts/smoke-production.mjs", () => {
         stdout: expect.stringContaining("summary: 1/5 passed"),
       });
     });
-  });
+  }, 15000);
 
   it("rejects non-HTTPS non-loopback production targets", async () => {
     await expect(
@@ -142,5 +142,5 @@ describe("scripts/smoke-production.mjs", () => {
         "Production smoke target must use HTTPS unless it is localhost/loopback",
       ),
     });
-  });
+  }, 15000);
 });

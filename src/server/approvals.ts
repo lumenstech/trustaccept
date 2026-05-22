@@ -44,9 +44,14 @@ const REFERENCE_SYSTEM = "trustaccept";
 
 const REF_LABELS = {
   actionType: "Action type",
+  week2ActionType: "action_type",
   principalType: "Principal type",
   principalValue: "Principal value",
+  approvalPrincipal: "approval_principal",
+  principalRole: "principal_role",
   agent: "Agent",
+  agentName: "agent_name",
+  agentRunId: "agent_run_id",
   environment: "Environment",
   amount: "Amount",
   resource: "Resource",
@@ -88,6 +93,38 @@ function buildSourceReferences(
       system: REFERENCE_SYSTEM,
       label: REF_LABELS.agent,
       externalId: ctx.agent_name,
+    });
+    refs.push({
+      system: "trustaccept_mcp",
+      label: REF_LABELS.agentName,
+      externalId: ctx.agent_name,
+    });
+  }
+  refs.push({
+    system: "trustaccept_mcp",
+    label: REF_LABELS.week2ActionType,
+    externalId: input.action.type,
+  });
+  refs.push({
+    system: input.principal.type,
+    label: REF_LABELS.approvalPrincipal,
+    externalId: input.principal.value,
+  });
+  const metadata = ctx.metadata ?? {};
+  const agentRunId = metadata.agent_run_id;
+  if (typeof agentRunId === "string" && agentRunId.length > 0) {
+    refs.push({
+      system: "trustaccept_mcp",
+      label: REF_LABELS.agentRunId,
+      externalId: agentRunId.slice(0, 120),
+    });
+  }
+  const principalRole = metadata.principal_role;
+  if (typeof principalRole === "string" && principalRole.length > 0) {
+    refs.push({
+      system: input.principal.type,
+      label: REF_LABELS.principalRole,
+      externalId: principalRole.slice(0, 120),
     });
   }
   if (ctx.environment) {

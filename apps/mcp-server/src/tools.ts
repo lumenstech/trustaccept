@@ -4,6 +4,10 @@ import {
   GetApprovalStatusInput,
   ListPendingApprovalsInput,
 } from "../../../src/lib/approval-types.js";
+import {
+  EvaluateActionInput,
+  ListRunActionsInput,
+} from "../../../src/lib/policy-types.js";
 
 export interface ToolContent {
   type: "text";
@@ -56,6 +60,19 @@ const LIST_PENDING_APPROVALS_DESC = [
   "",
   "Inputs are optional; calling with no filters returns the full pending queue (subject to the limit).",
   "principal_value must be ≤ 120 characters.",
+].join("\n");
+
+const EVALUATE_ACTION_DESC = [
+  "Advisory policy decision point for an agent action.",
+  "Returns one of auto_approve, require_human, or block before the agent decides its next step.",
+  "This tool does not execute, gate, broker, or proxy the action.",
+  "auto_approve and block decisions are still written to TrustAccept as audit records.",
+  "require_human returns suggested_request_approval_args that can be passed to request_approval.",
+].join("\n");
+
+const LIST_RUN_ACTIONS_DESC = [
+  "List every TrustAccept action tied to one agent_run_id.",
+  "Use this to show the full blast radius for one agent run, including policy decisions and human approvals.",
 ].join("\n");
 
 export const TOOL_DEFINITIONS = [
@@ -157,6 +174,110 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    name: "evaluate_action",
+    description: EVALUATE_ACTION_DESC,
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          minLength: 3,
+          maxLength: 200,
+          description: "Short imperative describing the action the agent wants to take.",
+        },
+        principal: {
+          type: "object",
+          description: "Who is accountable for the action.",
+          properties: {
+            type: {
+              type: "string",
+              enum: ["phone", "email", "user_id"],
+              description: "Principal identifier type.",
+            },
+            value: {
+              type: "string",
+              minLength: 3,
+              maxLength: 200,
+              description: "Principal identifier value.",
+            },
+            role: {
+              type: "string",
+              minLength: 1,
+              maxLength: 100,
+              description: "Principal role used for policy matching.",
+            },
+          },
+          required: ["type", "value"],
+        },
+        context: {
+          type: "object",
+          properties: {
+            agent_name: {
+              type: "string",
+              minLength: 1,
+              maxLength: 100,
+              description: "Name of the agent requesting evaluation.",
+            },
+            agent_run_id: {
+              type: "string",
+              minLength: 1,
+              maxLength: 200,
+              description: "Optional run identifier used for run grouping.",
+            },
+            action_type: {
+              type: "string",
+              minLength: 1,
+              maxLength: 100,
+              description: "Coarse action category used for policy matching.",
+            },
+            risk_level: {
+              type: "string",
+              enum: ["low", "medium", "high", "critical"],
+              description: "Risk level used for policy threshold matching.",
+            },
+            summary: {
+              type: "string",
+              minLength: 1,
+              maxLength: 1000,
+              description: "Human-readable action summary.",
+            },
+            metadata: {
+              type: "object",
+              additionalProperties: {
+                anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }],
+              },
+              description: "Optional scalar metadata captured with suggested approval args.",
+            },
+          },
+          required: ["agent_name", "action_type", "summary"],
+        },
+      },
+      required: ["action", "principal", "context"],
+    },
+  },
+  {
+    name: "list_run_actions",
+    description: LIST_RUN_ACTIONS_DESC,
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent_run_id: {
+          type: "string",
+          minLength: 1,
+          maxLength: 200,
+          description: "Agent run identifier to inspect.",
+        },
+        limit: {
+          type: "number",
+          minimum: 1,
+          maximum: 200,
+          description: "Maximum number of actions to return.",
+        },
+      },
+      required: ["agent_run_id"],
+    },
+  },
 ] as const;
 
 function asText(payload: unknown): ToolResult {
@@ -207,6 +328,32 @@ export async function handleListPendingApprovals(
     const input = ListPendingApprovalsInput.parse(args ?? {});
     const approvals = await client.listPendingApprovals(input);
     return asText({ approvals, count: approvals.length });
+  } catch (err) {
+    return asError(err);
+  }
+}
+
+export async function handleEvaluateAction(
+  client: ApprovalsClient,
+  args: unknown,
+): Promise<ToolResult> {
+  try {
+    const input = EvaluateActionInput.parse(args);
+    const result = await client.evaluateAction(input);
+    return asText(result);
+  } catch (err) {
+    return asError(err);
+  }
+}
+
+export async function handleListRunActions(
+  client: ApprovalsClient,
+  args: unknown,
+): Promise<ToolResult> {
+  try {
+    const input = ListRunActionsInput.parse(args);
+    const result = await client.listRunActions(input.agent_run_id, input.limit);
+    return asText(result);
   } catch (err) {
     return asError(err);
   }

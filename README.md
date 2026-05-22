@@ -203,6 +203,7 @@ by `/api/demo/risk-flow`:
 | Zod validation | done | `src/lib/validation.ts` |
 | Security headers | done | XCTO, XFO, Referrer-Policy, Permissions-Policy, CSP, HSTS (prod-only) |
 | Dashboard route protection | scaffolded | `proxy.ts` allows demo user; gate with `TRUSTACCEPT_DISABLE_DEMO_AUTH=1` |
+| MCP policy engine | done | Five-tool MCP server with advisory `evaluate_action`, run grouping via `list_run_actions`, and tenant-scoped policy admin routes |
 
 ## Project layout
 
@@ -405,6 +406,21 @@ install completes without modifying versions.
   - MCP tool allowlist. In `NODE_ENV=production`, `TRUSTACCEPT_ALLOWED_TOOL_IDS` is required.
   - Optional SequenceNow webhook delivery; set `TRUSTACCEPT_REQUIRE_SEQUENCENOW_WEBHOOK=1` to fail closed when webhook delivery is missing or unhealthy.
 - When demo auth is disabled, protected dashboard pages without `ta_session` redirect to `/`, while protected API routes return JSON `401` so MCP/API clients can fail cleanly. API route handlers also fail closed when no SequenceNow session resolves, so the proxy is not the only auth boundary.
+- `npm run release:check` also guards the MCP Week 2 contract: docs must describe five tools, `evaluate_action`, `list_run_actions`, the policy admin routes, run grouping, and the no-new-status mapping for `auto_approve` and `block`.
+
+### MCP policy and run grouping
+
+The MCP server in `apps/mcp-server` exposes five tools:
+
+- `request_approval` creates the existing human approval record.
+- `get_approval_status` reads an approval by id.
+- `list_pending_approvals` lists pending approvals.
+- `evaluate_action` returns an advisory `auto_approve`, `require_human`, or `block` decision before the agent chooses its next step.
+- `list_run_actions` returns every TrustAccept action tied to one `agent_run_id`.
+
+Policy storage is deliberately small for this production cut: `config/policy.default.json` provides the default per-tenant policy, and runtime overrides are tenant-scoped in memory. `GET /api/v1/policy` returns the caller tenant's policy set. `PUT /api/v1/policy` validates and replaces that tenant's policy set. No Prisma model or migration is required for this Week 2 layer.
+
+`evaluate_action` is advisory only. It does not execute, gate, broker, or proxy the agent action. It writes a RiskRecord only for non-human policy decisions so the audit trail is never silent: `auto_approve` maps to the existing `accepted` status, and `block` maps to the existing `rejected` status. `require_human` writes nothing and returns `suggested_request_approval_args` for the existing `request_approval` flow.
 
 ### SequenceNow session contract
 
@@ -544,6 +560,12 @@ existing entries.
 | `GET`/`POST` | `/api/evidence-packets/[id]/export.pdf` | Stream a real `application/pdf` evidence packet |
 | `POST` | `/api/leads` | Persist a service-led lead capture submission |
 | `GET` | `/api/demo/risk-flow` | Demo overview JSON for integration smoke tests |
+| `GET`/`PUT` | `/api/v1/policy` | Tenant-scoped MCP policy set read/replace |
+| `POST` | `/api/v1/approvals` | Create an MCP approval request |
+| `GET` | `/api/v1/approvals` | List MCP approvals |
+| `GET` | `/api/v1/approvals/[id]` | Read one MCP approval |
+| `POST` | `/api/v1/approvals/evaluate` | Advisory policy decision for an agent action |
+| `GET` | `/api/v1/approvals/by-run/[runId]` | Run-level rollup for one `agent_run_id` |
 
 All write endpoints validate input with Zod (`src/lib/validation.ts`),
 enforce organization scope (`src/server/auth.ts`), and append an audit log.

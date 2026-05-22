@@ -134,7 +134,7 @@ export const TOOL_DEFINITIONS = [
               type: "object",
               additionalProperties: true,
               description:
-                "Free-form metadata. Accepted but not persisted in the MVP.",
+                "Free-form metadata. agent_run_id and principal_role are persisted to sourceReferences for run grouping; other keys are not retained directly.",
             },
           },
         },

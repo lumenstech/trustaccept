@@ -19,6 +19,8 @@ const copiedPaths = [
   ".github/workflows/ci.yml",
   "Dockerfile",
   "README.md",
+  "apps/mcp-server/FIELD_MAPPING.md",
+  "apps/mcp-server/README.md",
   "package.json",
 ];
 
@@ -88,6 +90,27 @@ describe("scripts/check-release-readiness.mjs", () => {
       }),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining('README.md: missing "### Rollback runbook"'),
+    });
+  });
+
+  it("fails when the MCP README regresses to the old three-tool contract", async () => {
+    const root = tempRepo((dir) => {
+      rewrite(dir, "apps/mcp-server/README.md", (content) =>
+        content
+          .replace("Exposes five tools", "Exposes three tools")
+          .replace("\n- `evaluate_action(action, principal, context)`", "")
+          .replace("\n- `list_run_actions(agent_run_id, limit?)`", ""),
+      );
+    });
+
+    await expect(
+      execFileAsync(process.execPath, ["scripts/check-release-readiness.mjs", root], {
+        cwd: process.cwd(),
+      }),
+    ).rejects.toMatchObject({
+      stderr: expect.stringContaining(
+        'apps/mcp-server/README.md: stale "Exposes three tools" text is not allowed',
+      ),
     });
   });
 });

@@ -84,6 +84,45 @@ function checkReadme(errors) {
     "npm run prisma:migrate:deploy",
     "/api/health",
     "/api/ready",
+    "### MCP policy and run grouping",
+    "evaluate_action",
+    "list_run_actions",
+    "/api/v1/policy",
+    "/api/v1/approvals/evaluate",
+    "/api/v1/approvals/by-run/[runId]",
+    "No Prisma model or migration is required for this Week 2 layer.",
+    "`auto_approve` maps to the existing `accepted` status",
+    "`block` maps to the existing `rejected` status",
+  ]);
+}
+
+function checkMcpDocs(errors) {
+  const readme = read("apps/mcp-server/README.md");
+  requireIncludes(errors, "apps/mcp-server/README.md", readme, [
+    "Exposes five tools",
+    "`request_approval(action, principal, context?, tool_id?)`",
+    "`get_approval_status(request_id)`",
+    "`list_pending_approvals(principal_type?, principal_value?, limit?)`",
+    "`evaluate_action(action, principal, context)`",
+    "`list_run_actions(agent_run_id, limit?)`",
+    "This tool does not execute, gate, broker, or proxy",
+    "`auto_approve` maps to the existing TrustAccept `accepted` status",
+    "`block` maps to the existing `rejected` status",
+  ]);
+  if (readme.includes("Exposes three tools")) {
+    addError(errors, "apps/mcp-server/README.md", 'stale "Exposes three tools" text is not allowed');
+  }
+
+  const fieldMapping = read("apps/mcp-server/FIELD_MAPPING.md");
+  requireIncludes(errors, "apps/mcp-server/FIELD_MAPPING.md", fieldMapping, [
+    "`evaluate_action` / `list_run_actions`",
+    "## 3. Week 2 advisory policy decisions",
+    "## 4. `list_run_actions` output",
+    "`auto_approve`",
+    "`block`",
+    "Week 2 does not add `auto_approved`, `blocked`, or `cancelled` status values.",
+    "`context.metadata.agent_run_id`",
+    "`context.metadata.principal_role`",
   ]);
 }
 
@@ -92,6 +131,7 @@ checkPackage(errors);
 checkDockerfile(errors);
 checkCi(errors);
 checkReadme(errors);
+checkMcpDocs(errors);
 
 if (errors.length > 0) {
   console.error("Production release-readiness check failed:");

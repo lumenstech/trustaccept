@@ -5,7 +5,7 @@
 **Companion to:** [`MARKETPLACE_AUDIT.md`](../../MARKETPLACE_AUDIT.md)
 **Status:** Contract for Blocks 2–5. Any block that adds a field updates this document first.
 
-This document is the **storage contract** for the MCP-facing `request_approval` / `get_approval_status` / `list_pending_approvals` tools. Every MCP input field has an explicit home in TrustAccept's data model; every MCP output field has an explicit source.
+This document is the **storage contract** for the MCP-facing `request_approval` / `get_approval_status` / `list_pending_approvals` / `evaluate_action` / `list_run_actions` tools. Every MCP input field has an explicit home in TrustAccept's data model; every MCP output field has an explicit source.
 
 Storage rules from the plan are filled in with the audit's findings. The defaults below are picked from the **least-disruptive mapping** that uses first-class `RiskRecord` fields wherever they exist and `sourceReferences[]` only for short ID-bearing values.
 
@@ -38,7 +38,10 @@ request_approval({
 | `context.amount` | `sourceReferences[]` as `{ system: "trustaccept", label: "Amount", externalId: String(amount) }` | Optional. **Stored as decimal string.** Policy engine reads `context.amount` directly from the request, not from storage. |
 | `context.resource` | `sourceReferences[]` as `{ system: "trustaccept", label: "Resource", externalId: resource }` | Optional. |
 | `context.business_justification` | `RiskRecord.businessJustification` (first-class long text, `min(1).max(4000)`) | If absent, wrapper defaults to a templated sentence (`"Submitted via TrustAccept MCP by {agent_name or 'agent'}. No business justification provided."`) to satisfy the `min(1)` Zod constraint. |
-| `context.metadata` | **Deferred to post-MVP.** Not persisted. | Document in MCP tool description that metadata is accepted but not retained in the MVP. Future block can add a `Json` column or splat selected metadata into `sourceReferences[]`. |
+| `context.metadata.agent_run_id` | `sourceReferences[]` as `{ system: "trustaccept_mcp", label: "agent_run_id", externalId: agent_run_id }` | Optional. Enables `list_run_actions` to group human approvals with policy decisions for the same agent run. Truncated to 120 chars for the source reference cap. |
+| `context.metadata.principal_role` | `sourceReferences[]` as `{ system: principal.type, label: "principal_role", externalId: principal_role }` | Optional. Preserves role context for run audit. Truncated to 120 chars. |
+| `context.metadata.action_type` | Not used by `request_approval`; `action.type` is persisted as both `"Action type"` and Week 2 `"action_type"` source references. | `evaluate_action` places this value in `action.type` when it returns `suggested_request_approval_args`. |
+| Other `context.metadata` values | Not persisted directly. | Only the selected run-grouping keys above are retained in source references. |
 | `tool_id` | `sourceReferences[]` as `{ system: "trustaccept", label: "Tool ID", externalId: tool_id }` | Enforced before persistence when `TRUSTACCEPT_ALLOWED_TOOL_IDS` is configured. The env var is a comma-separated list; requests with missing or unlisted `tool_id` fail with 403. |
 
 ### Wrapper-supplied static fields (required by `RiskRecordCreateInput` Zod schema)
@@ -58,7 +61,7 @@ These fields are required by the existing schema but are not part of the MCP inp
 
 ---
 
-## 2. Policy and action-hash fields (Block 4) → TrustAccept storage
+## 2. Approval policy and action-hash fields → TrustAccept storage
 
 These are produced by `evaluateApprovalPolicy(input)` and `hashAction(action)` in the wrapper, then written by the wrapper into the same `RiskRecord` create call.
 
@@ -92,7 +95,37 @@ When the policy engine returns `decision === "require_approval"`:
 
 ---
 
-## 3. Receipt JWT fields (Block 5) → source
+## 3. Week 2 advisory policy decisions → TrustAccept storage
+
+`evaluate_action` is advisory. It never executes, gates, brokers, or proxies the requested action. It only returns a policy decision and, for non-human decisions, writes the audit record through the existing RiskRecord service path.
+
+| `evaluate_action` result | RiskRecord write | Status | Source references |
+|---|---|---|---|
+| `auto_approve` | Yes | `accepted` | `decision_source`, `policy_set_version`, `approval_principal`, `agent_name`, `action_type`, optional `agent_run_id`, optional `principal_role` |
+| `block` | Yes | `rejected` | Same as `auto_approve` |
+| `require_human` | No | n/a | The returned `suggested_request_approval_args` should be passed to `request_approval`, which writes the pending record. |
+
+Week 2 does not add `auto_approved`, `blocked`, or `cancelled` status values. Auto and block decisions deliberately reuse the existing `accepted` and `rejected` lifecycle states.
+
+## 4. `list_run_actions` output → source
+
+`list_run_actions(agent_run_id)` reads tenant-scoped `RiskRecord` rows where `module === "ai-action-gate"` and `sourceReferences[]` contains `{ label: "agent_run_id", externalId: agent_run_id }`.
+
+| Output field | Source |
+|---|---|
+| `request_id` | `RiskRecord.id` |
+| `action` | `RiskRecord.title` |
+| `decision_source` | `sourceReferences[]` entry `decision_source` with `system: "policy_engine"` → `"policy_engine"`; missing reference defaults to `"human"` |
+| `status` | `accepted` → `"approved"`; `rejected` → `"denied"`; `expired` → `"expired"`; otherwise `"pending"` |
+| `risk_level` | `RiskRecord.riskLevel` |
+| `created_at` | `RiskRecord.createdAt` |
+| `decided_at` | `RiskRecord.decisionAt` or `null` |
+| `summary.auto_approved` | Count of `"policy_engine"` + `"approved"` actions |
+| `summary.human_approved` | Count of `"human"` + `"approved"` actions |
+| `summary.denied_or_blocked` | Count of `"denied"` actions |
+| `summary.pending` | Count of `"pending"` actions |
+
+## 5. Receipt JWT fields (Block 5) → source
 
 Receipts are issued on demand by `issueReceipt(decision)` and embedded in the response of `GET /api/v1/approvals/[id]` and MCP `get_approval_status` **only for resolved decisions** (status ∈ {accepted, rejected, remediation_required, expired}).
 
@@ -116,7 +149,7 @@ JWT signing: RS256, single key from env (e.g. `TRUSTACCEPT_RECEIPT_PRIVATE_KEY_P
 
 ---
 
-## 4. MCP `get_approval_status` output → source
+## 6. MCP `get_approval_status` output → source
 
 Locked output schema. All reserved fields default to `null` until later blocks populate them.
 
@@ -136,7 +169,7 @@ Locked output schema. All reserved fields default to `null` until later blocks p
 
 ---
 
-## 5. Reserved-for-later fields (initially `null`)
+## 7. Reserved-for-later fields (initially `null`)
 
 All fields in the MCP output schema are reserved from Day 1 to avoid breaking changes:
 
@@ -153,7 +186,7 @@ Block 2's wrapper **must declare and return these fields with `null` values from
 
 ---
 
-## 6. What goes where — quick reference card
+## 8. What goes where — quick reference card
 
 ```
 First-class RiskRecord fields used:
@@ -185,7 +218,11 @@ sourceReferences[] entries (each externalId ≤120 chars):
   { label: "Tool ID",         system: "trustaccept", externalId: tool_id } [optional]
   { label: "Policy",          system: "trustaccept", externalId: policy_id } [Block 4]
   { label: "Action hash",     system: "trustaccept", externalId: "sha256:" + hex } [Block 4]
-  { label: "Agent run ID",    system: "trustaccept", externalId: agent_run_id } [reserved, post-MVP]
+  { label: "agent_run_id",    system: "trustaccept_mcp", externalId: agent_run_id } [Week 2]
+  { label: "principal_role",  system: principal.type, externalId: principal_role } [Week 2]
+  { label: "action_type",     system: "trustaccept_mcp", externalId: action.type } [Week 2]
+  { label: "decision_source", system: "policy_engine", externalId: matched_rule_id|"default" } [Week 2 evaluate_action auto/block]
+  { label: "policy_set_version", system: "policy_engine", externalId: policy_set_version } [Week 2 evaluate_action auto/block]
 
 Generated on demand (never persisted):
   receipt_jwt — RS256-signed JWT, claims per §3, only when status is resolved
@@ -193,7 +230,7 @@ Generated on demand (never persisted):
 
 ---
 
-## 7. Cross-references
+## 9. Cross-references
 
 - Audit findings: [`MARKETPLACE_AUDIT.md`](../../MARKETPLACE_AUDIT.md)
 - Existing service code: `src/server/riskRecords.ts`, `src/server/auditLogs.ts`, `src/server/auth.ts`
